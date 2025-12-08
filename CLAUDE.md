@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a React + TypeScript + Vite application using Tailwind CSS v4 for styling. The project is configured to use shadcn/ui components with the "new-york" style.
+This is a React + TypeScript + Vite application using Tailwind CSS v4 for styling. The project is configured to use shadcn/ui components with the "new-york" style. Always check if a shadcn/ui component can be used before created a UI component in tailwind
 
 ## Development Commands
 
@@ -92,4 +92,4 @@ ESLint is configured with flat config format using:
 
 ## Adding shadcn/ui Components
 
-This project is configured to use shadcn/ui components. To add new components, use the shadcn CLI (if installed) or manually add component files to `src/components/ui/` following the project's path alias structure.
+This project is configured to use shadcn/ui components. To add new components, use the shadcn CLI (if installed) or manually add component files to `src/components/ui/` following the project's path alias structure. Refer to C:\Users\Admin\ .vscode\secondsens\llms.txt
