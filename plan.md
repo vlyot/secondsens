@@ -8,204 +8,362 @@
 
 ## Overview
 
-This document provides a detailed, step-by-step implementation plan for SecondSense MVP (Phases 1-4). The project is split into **distinct services** to enable parallel development:
+This document provides a detailed, step-by-step implementation plan for SecondSense MVP (Phases 1-4). The project uses a **modular monolith architecture** where business logic is cleanly separated into modules within a single codebase:
 
-1. **Frontend Service** - React + Vite + Tailwind CSS UI / shadcnUI
-2. **Backend Service** - Go API for business logic
-3. **Product Catalog Service** - YAML/JSON product database
-4. **LLM Reasoning Service** - Prompt engineering & integration
-5. **Price Search Service** - LLM-powered web search module
-6. **Caching Service** - Redis for performance
+### Core Modules:
 
-Each service has clear boundaries, making it easy to work independently.
+1. **Product Module** (`src/products/`)
+   - Manages product database (20-50 gaming peripherals)
+   - Handles fuzzy matching and product disambiguation
+   - Business logic: `product_service.go`, `product_repository.go`
+   - HTTP handlers: `handlers.go`
+
+2. **Price Module** (`src/prices/`)
+   - Fetches prices across condition tiers
+   - LLM-powered web search integration
+   - Validates and parses price data
+   - Business logic: `price_service.go`, `llm_client.go`
+
+3. **Recommendation Module** (`src/recommendations/`)
+   - LLM reasoning and ranking logic
+   - Generates recommendations based on user preferences
+   - Calculates confidence scores
+   - Business logic: `recommendation_service.go`, `prompt_builder.go`
+
+4. **Frontend** (`frontend-service/`)
+   - React + TypeScript/Vite + shadcn/ui
+   - User-facing web application
+   - Single HTTP POST entry point to backend
+
+5. **Shared/Infrastructure** (`src/shared/`)
+   - Database connections
+   - Cache layer (in-memory or Redis)
+   - Domain types and events
+   - HTTP client utilities
 
 ---
 
-## Architecture Overview
+## Architecture Overview (Modular Monolith)
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Frontend (React/Typescipt/Vite)                   │
-│  - SearchBar component                                      │
-│  - PersonalisationSliders component                         │
-│  - RecommendationDisplay component                          │
-│  - LoadingState & ErrorState components                     │
-└───────────────────────┬─────────────────────────────────────┘
-                        │ HTTP POST /api/recommend
-                        │ {item, preferences}
-                        ↓
-┌─────────────────────────────────────────────────────────────┐
-│                 Backend (Go) - Main Handler                 │
-│  handlers/recommendation.go                                 │
-│  - Validate input                                           │
-│  - Route to services                                        │
-│  - Cache check/store                                        │
-│  - Error handling                                           │
-└───────────────┬───────────────────────────────────────────┬─┘
-                │                                           │
-                ↓ Call                                      ↓ Call
-    ┌──────────────────────┐              ┌────────────────────────┐
-    │  Product Catalog     │              │  Price Search Service  │
-    │  Service             │              │  services/price_...go  │
-    │  Match product name  │              │  - LLM web search      │
-    │  Return canonical ID │              │  - Parse results       │
-    └──────────────────────┘              │  - Validate prices     │
-                                          └────────────────────────┘
-                │                                       │
-                └───────────────┬───────────────────────┘
-                                ↓
-                    ┌──────────────────────────┐
-                    │  LLM Reasoning Service   │
-                    │  services/llm_client.go  │
-                    │  - Generate ranking      │
-                    │  - Create explanation    │
-                    │  - Calculate confidence  │
-                    └──────────────────────────┘
-                                ↓
-                    ┌──────────────────────────┐
-                    │    Cache Layer           │
-                    │  (Redis/In-Memory)       │
-                    │  - 24hr TTL              │
-                    └──────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│  Frontend (React + TypeScript + Vite)                  │
+│  - SearchBar component                                 │
+│  - PersonalisationSliders component                    │
+│  - RecommendationDisplay component                     │
+│  - Communicates via: POST /api/recommend               │
+└────────────────────────┬─────────────────────────────┘
+                         │
+                         │ HTTP POST
+                         │ {item, preferences}
+                         ↓
+    ┌────────────────────────────────────────┐
+    │  Backend (Go) - Single Binary           │
+    │                                         │
+    │  ┌──────────────────────────────────┐  │
+    │  │ HTTP Handler Layer               │  │
+    │  │ - main.rs: Route POST /recommend │  │
+    │  │ - CORS, logging, errors          │  │
+    │  └──────────────┬───────────────────┘  │
+    │                 │                      │
+    │  ┌──────────────┴───────────────────┐  │
+    │  │ Recommendation Handler           │  │
+    │  │ - Orchestrates all modules       │  │
+    │  │ - Manages request flow           │  │
+    │  └──────────────┬───────────────────┘  │
+    │                 │                      │
+    │  ┌──────────────┴───────────────────┐  │
+    │  │ Product Module                   │  │
+    │  │ ├─ product_service.rs            │  │
+    │  │ ├─ product_repository.rs         │  │
+    │  │ └─ handlers.rs                   │  │
+    │  │                                  │  │
+    │  │ Responsibilities:                │  │
+    │  │ - Fuzzy match products           │  │
+    │  │ - Return canonical names         │  │
+    │  │ - Handle disambiguation          │  │
+    │  └──────────────┬───────────────────┘  │
+    │                 │                      │
+    │  ┌──────────────┴───────────────────┐  │
+    │  │ Price Module                     │  │
+    │  │ ├─ price_service.rs              │  │
+    │  │ ├─ llm_client.rs                 │  │
+    │  │ └─ handlers.rs                   │  │
+    │  │                                  │  │
+    │  │ Responsibilities:                │  │
+    │  │ - Call LLM for web search        │  │
+    │  │ - Parse & validate prices        │  │
+    │  │ - Return price data              │  │
+    │  └──────────────┬───────────────────┘  │
+    │                 │                      │
+    │  ┌──────────────┴───────────────────┐  │
+    │  │ Recommendation Module            │  │
+    │  │ ├─ recommendation_service.rs      │  │
+    │  │ ├─ prompt_builder.rs             │  │
+    │  │ └─ handlers.rs                   │  │
+    │  │                                  │  │
+    │  │ Responsibilities:                │  │
+    │  │ - Generate LLM prompts           │  │
+    │  │ - Parse LLM responses            │  │
+    │  │ - Rank & score options           │  │
+    │  └──────────────┬───────────────────┘  │
+    │                 │                      │
+    │  ┌──────────────┴───────────────────┐  │
+    │  │ Shared Module (Infrastructure)   │  │
+    │  │ ├─ cache.rs                      │  │
+    │  │ ├─ config.rs                     │  │
+    │  │ ├─ domain/types.rs               │  │
+    │  │ └─ http_client.rs                │  │
+    │  │                                  │  │
+    │  │ Shared across all modules        │  │
+    │  └──────────────────────────────────┘  │
+    │                                         │
+    └─────────────────────────────────────────┘
+```
+
+### Request Flow:
+
+```
+1. Frontend sends: POST /api/recommend {item, preferences}
+                         ↓
+2. Handler receives request
+   - Validates input
+   - Calls recommendation handler
+                         ↓
+3. Product Module: Search & match product
+   - Check cache
+   - Fuzzy match against catalog
+   - Return canonical product name
+                         ↓
+4. Price Module: Fetch prices
+   - Check cache
+   - Call LLM with web search
+   - Validate & parse prices
+                         ↓
+5. Recommendation Module: Generate ranking
+   - Check cache
+   - Build LLM prompt
+   - Call LLM for reasoning
+   - Parse & rank options
+                         ↓
+6. Handler returns: RecommendationResponse
+                         ↓
+7. Frontend displays results
 ```
 
 ---
 
 ## Phase 1: Project Setup & Scaffolding (Days 1-2)
 
-### 1.1 Initialize Frontend Project
+### Directory Structure (Modular Monolith)
 
-**Goal:** Set up React + Vite project with all dependencies
+```
+secondsense/
+├── backend/                    # Go monolith backend
+│   ├── src/
+│   │   ├── products/           # Product module
+│   │   ├── prices/             # Price module
+│   │   ├── recommendations/    # Recommendation module
+│   │   ├── shared/             # Shared infrastructure
+│   │   └── main.go             # Entry point
+│   ├── go.mod
+│   ├── go.sum
+│   ├── data/
+│   │   └── products.yaml       # Product catalog
+│   ├── Dockerfile
+│   └── README.md
+│
+├── frontend-service/           # React + TypeScript app
+│   ├── src/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── services/
+│   │   ├── lib/
+│   │   └── App.tsx
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── Dockerfile
+│
+└── .env.example                # Shared environment
+```
 
-**Steps:**
-- [ ] Create frontend directory: `mkdir frontend && cd frontend`
-- [ ] Initialize Vite React project: `npm create vite@latest . -- --template react`
-- [ ] Install additional dependencies:
-  ```bash
-  npm install tailwindcss @tailwindcss/vite
-  npm install shadcn-ui lucide-react
-  npm install axios
-  npm install --save-dev @types/react @types/react-dom
-  npm install --save-dev eslint @typescript/eslint-plugin
-  ```
-- [ ] Configure Tailwind CSS in `tailwind.config.js`
-- [ ] Create directory structure:
-  ```
-  src/
-  ├── components/
-  │   ├── SearchBar.tsx
-  │   ├── PersonalisationSliders.tsx
-  │   ├── RecommendationDisplay.tsx
-  │   ├── ProductDisambiguation.tsx
-  │   ├── LoadingState.tsx
-  │   └── ErrorState.tsx
-  ├── hooks/
-  │   └── useRecommendation.ts
-  ├── services/
-  │   └── api.ts
-  ├── lib/
-  │   ├── utils.ts
-  │   └── constants.ts
-  ├── App.tsx
-  ├── App.css
-  ├── index.css
-  └── main.tsx
-  ```
-- [ ] Create `.env.example` with API endpoint placeholder
-- [ ] Initialize Git: `git init && git add . && git commit -m "initial: frontend scaffolding"`
-
-**Deliverable:** Working Vite dev environment (npm run dev)
+### Key Principle:
+- **One backend binary** - All modules compiled into a single Go executable
+- **Clean module boundaries** - Modules have internal structure but share the same process
+- **Minimal coupling** - Modules only depend on shared infrastructure (cache, config, types)
+- **Easy to test** - Import modules directly in tests, no HTTP mocking needed initially
 
 ---
 
-### 1.2 Initialize Backend Project (Go)
+### 1.1 Initialize Go Backend Project
 
-**Goal:** Set up Go project with basic HTTP server structure
+**Goal:** Set up modular Go monolith with clear module structure
+
+**Location:** `backend/`
 
 **Steps:**
 - [ ] Create backend directory: `mkdir backend && cd backend`
 - [ ] Initialize Go module: `go mod init secondsense/backend`
+- [ ] Install dependencies:
+  ```bash
+  go get github.com/gin-gonic/gin
+  go get github.com/anthropics/anthropic-sdk-go
+  go get github.com/joho/godotenv
+  go get gopkg.in/yaml.v2
+  ```
 - [ ] Create directory structure:
   ```
   backend/
-  ├── main.go
+  ├── src/
+  │   ├── products/
+  │   │   ├── product_service.go
+  │   │   ├── product_repository.go
+  │   │   └── handlers.go
+  │   ├── prices/
+  │   │   ├── price_service.go
+  │   │   ├── llm_client.go
+  │   │   ├── validators.go
+  │   │   └── handlers.go
+  │   ├── recommendations/
+  │   │   ├── recommendation_service.go
+  │   │   ├── prompt_builder.go
+  │   │   └── handlers.go
+  │   ├── shared/
+  │   │   ├── cache.go
+  │   │   ├── config.go
+  │   │   ├── domain/
+  │   │   │   └── types.go
+  │   │   └── http_client.go
+  │   └── main.go
+  ├── data/
+  │   └── products.yaml
   ├── go.mod
   ├── go.sum
-  ├── config/
-  │   └── config.go
-  ├── handlers/
-  │   ├── recommendation.go
-  │   └── health.go
-  ├── services/
-  │   ├── product_catalog.go
-  │   ├── price_search.go
-  │   ├── llm_client.go
-  │   └── cache.go
-  ├── models/
-  │   └── types.go
-  ├── middleware/
-  │   └── cors.go
-  ├── products.yaml
-  ├── Dockerfile (for later deployment)
   ├── .env.example
+  ├── Dockerfile
   └── README.md
   ```
-- [ ] Install Go dependencies:
-  ```bash
-  go get github.com/gin-gonic/gin  # or Fiber
-  go get github.com/go-yaml/yaml
-  go get github.com/anthropics/anthropic-sdk-go  # for Claude API
-  go get github.com/joho/godotenv
-  ```
-- [ ] Create basic `main.go` with HTTP server scaffold:
+- [ ] Create basic `main.go`:
   ```go
   package main
 
   import (
       "log"
       "github.com/gin-gonic/gin"
-      "secondsense/backend/config"
-      "secondsense/backend/handlers"
+      "secondsense/backend/src/shared"
+      "secondsense/backend/src/recommendations"
   )
 
   func main() {
-      cfg := config.Load()
+      cfg := shared.LoadConfig()
+
       router := gin.Default()
+      router.Use(corsMiddleware())
 
-      // Routes
-      router.GET("/health", handlers.HealthCheck)
-      router.POST("/api/recommend", handlers.GetRecommendation)
+      router.GET("/health", func(c *gin.Context) {
+          c.JSON(200, gin.H{"status": "ok"})
+      })
 
-      if err := router.Run(":8080"); err != nil {
-          log.Fatal(err)
-      }
+      router.POST("/api/recommend", recommendations.HandleRecommendation)
+
+      log.Printf("Server running on port %s\n", cfg.Port)
+      router.Run(":" + cfg.Port)
   }
   ```
-- [ ] Create `config/config.go` to load environment variables
-- [ ] Initialize Git
+- [ ] Create `.env.example`:
+  ```
+  PORT=8080
+  LLM_API_KEY=your_key_here
+  LLM_MODEL=claude-3-5-sonnet-20241022
+  CACHE_TTL=86400
+  ```
 
-**Deliverable:** Basic Go HTTP server running on localhost:8080
+**Deliverable:** Go backend compiles and runs on port 8080
 
 ---
 
-### 1.3 Create API Contract
+### 1.2 Initialize Frontend Service
 
-**Goal:** Define request/response types used by both frontend and backend
+**Goal:** Set up React + Vite + TypeScript project with shadcn/ui
+
+**Location:** `frontend-service/`
 
 **Steps:**
-- [ ] Create `backend/models/types.go` with these structs:
+- [ ] Create frontend directory: `mkdir frontend-service && cd frontend-service`
+- [ ] Initialize Vite React with TypeScript: `npm create vite@latest . -- --template react-ts`
+- [ ] Install dependencies:
+  ```bash
+  npm install tailwindcss @tailwindcss/vite
+  npm install shadcn-ui lucide-react
+  npm install axios
+  npm install --save-dev @types/react @types/react-dom typescript
+  npm install --save-dev eslint @typescript/eslint-plugin
+  ```
+- [ ] Setup shadcn/ui: `npx shadcn-ui@latest init`
+- [ ] Create directory structure:
+  ```
+  frontend-service/
+  ├── src/
+  │   ├── components/
+  │   │   ├── SearchBar.tsx
+  │   │   ├── PersonalisationSliders.tsx
+  │   │   ├── RecommendationDisplay.tsx
+  │   │   ├── ProductDisambiguation.tsx
+  │   │   ├── LoadingState.tsx
+  │   │   ├── ErrorState.tsx
+  │   │   └── ui/              # shadcn/ui components
+  │   ├── hooks/
+  │   │   └── useRecommendation.ts
+  │   ├── services/
+  │   │   ├── api.ts           # HTTP client for backend
+  │   │   └── marketplaceLinks.ts
+  │   ├── lib/
+  │   │   ├── utils.ts
+  │   │   ├── types.ts         # TypeScript interfaces
+  │   │   └── constants.ts
+  │   ├── App.tsx
+  │   ├── index.css
+  │   └── main.tsx
+  ├── .env.example
+  ├── package.json
+  ├── tsconfig.json
+  ├── vite.config.ts
+  ├── tailwind.config.js
+  ├── Dockerfile
+  └── README.md
+  ```
+- [ ] Create `.env.example`:
+  ```
+  VITE_API_BACKEND_URL=http://localhost:8080
+  ```
+- [ ] Initialize Git
+
+**Deliverable:** Working Vite dev environment (npm run dev on :5173)
+
+---
+
+### 1.3 Setup Shared Types
+
+**Goal:** Define types shared between backend modules and frontend
+
+**Location:** `backend/src/shared/domain/types.go`
+
+**Steps:**
+- [ ] Create `backend/src/shared/domain/types.go` with all domain types:
   ```go
-  // Request
+  package domain
+
   type RecommendationRequest struct {
       Item        string `json:"item"`
-      Preferences struct {
-          BudgetFlexibility  int `json:"budget_flexibility"`   // 0-10
-          ConditionStandards int `json:"condition_standards"`   // 0-10
-          HassleTolerances   int `json:"hassle_tolerance"`      // 0-10
-      } `json:"preferences"`
+      Preferences Preferences `json:"preferences"`
   }
 
-  // Response
+  type Preferences struct {
+      BudgetFlexibility  int `json:"budget_flexibility"`   // 0-10
+      ConditionStandards int `json:"condition_standards"`   // 0-10
+      HassleTolerances   int `json:"hassle_tolerance"`      // 0-10
+  }
+
   type RecommendationResponse struct {
       Success        bool                `json:"success"`
       ProductName    string              `json:"product_name"`
@@ -217,15 +375,22 @@ Each service has clear boundaries, making it easy to work independently.
   }
 
   type RankedOption struct {
-      Rank         int    `json:"rank"`
-      Condition    string `json:"condition"`
-      AvgPrice     float64 `json:"avg_price"`
-      PriceRange   PriceRange `json:"price_range"`
-      SavingsVsNew struct {
-          Absolute float64 `json:"absolute"`
-          Percent  float64 `json:"percent"`
-      } `json:"savings_vs_new"`
-      Justification string `json:"justification"`
+      Rank         int         `json:"rank"`
+      Condition    string      `json:"condition"`
+      AvgPrice     float64     `json:"avg_price"`
+      PriceRange   PriceRange  `json:"price_range"`
+      SavingsVsNew SavingsInfo `json:"savings_vs_new"`
+      Justification string     `json:"justification"`
+  }
+
+  type PriceRange struct {
+      Min float64 `json:"min"`
+      Max float64 `json:"max"`
+  }
+
+  type SavingsInfo struct {
+      Absolute float64 `json:"absolute"`
+      Percent  float64 `json:"percent"`
   }
 
   type MarketStats struct {
@@ -240,14 +405,55 @@ Each service has clear boundaries, making it easy to work independently.
       Range    PriceRange `json:"range"`
   }
 
-  type PriceRange struct {
-      Min float64 `json:"min"`
-      Max float64 `json:"max"`
+  type PriceData struct {
+      BrandNew []float64 `json:"brand_new"`
+      LikeNew  []float64 `json:"like_new"`
+      Good     []float64 `json:"good"`
+      WellUsed []float64 `json:"well_used"`
+  }
+
+  type Product struct {
+      ID            string   `yaml:"id"`
+      CanonicalName string   `yaml:"canonical_name"`
+      Category      string   `yaml:"category"`
+      Aliases       []string `yaml:"aliases"`
   }
   ```
-- [ ] Create corresponding TypeScript types in `frontend/src/lib/types.ts`
 
-**Deliverable:** Clear API contract both services follow
+**Deliverable:** Shared types used across all backend modules
+
+---
+
+### 1.4 Create Product Catalog Data
+
+**Goal:** Initialize product database
+
+**Location:** `backend/data/products.yaml`
+
+**Steps:**
+- [ ] Create YAML file with 20-30 products:
+  ```yaml
+  products:
+    - id: logitech_gpro_x_superlight
+      canonical_name: "Logitech G Pro X Superlight"
+      category: gaming_mouse
+      aliases:
+        - "gpro superlight"
+        - "g pro x sl"
+        - "910-005878"
+
+    - id: razer_deathadder_v3
+      canonical_name: "Razer DeathAdder V3"
+      category: gaming_mouse
+      aliases:
+        - "deathadder v3"
+        - "deathadder 3"
+        - "da v3"
+
+    # ... 28 more products
+  ```
+
+**Deliverable:** Product database ready for module to use
 
 ---
 
@@ -1330,81 +1536,125 @@ export function openMarketplaceSearch(link) {
 
 ---
 
-## File Structure Summary
+## File Structure Summary (Modular Monolith)
 
 ```
 secondsense/
-├── frontend/
+│
+├── backend/                          # Go monolith (single binary)
+│   ├── src/
+│   │   ├── products/                 # Product Module
+│   │   │   ├── product_service.go    # Business logic: matching, fuzzy search
+│   │   │   ├── product_repository.go # Data access: load catalog, YAML parsing
+│   │   │   └── handlers.go           # HTTP handlers (if separate endpoints)
+│   │   │
+│   │   ├── prices/                   # Price Module
+│   │   │   ├── price_service.go      # Business logic: orchestrate LLM search
+│   │   │   ├── llm_client.go         # Call Claude API for web search
+│   │   │   ├── validators.go         # Price validation, outlier detection
+│   │   │   └── handlers.go           # HTTP handlers
+│   │   │
+│   │   ├── recommendations/          # Recommendation Module
+│   │   │   ├── recommendation_service.go  # Business logic: ranking, scoring
+│   │   │   ├── prompt_builder.go     # Build LLM prompts
+│   │   │   ├── response_parser.go    # Parse LLM JSON responses
+│   │   │   └── handlers.go           # HTTP handlers
+│   │   │
+│   │   ├── shared/                   # Shared Infrastructure (used by all modules)
+│   │   │   ├── cache.go              # In-memory cache implementation
+│   │   │   ├── config.go             # Load environment variables
+│   │   │   ├── domain/
+│   │   │   │   └── types.go          # All domain types & structs
+│   │   │   ├── http_client.go        # Reusable HTTP client utilities
+│   │   │   └── logger.go             # Logging utilities (optional)
+│   │   │
+│   │   └── main.go                   # Entry point: router setup, initialization
+│   │
+│   ├── data/
+│   │   └── products.yaml             # Product catalog database
+│   │
+│   ├── go.mod
+│   ├── go.sum
+│   ├── .env.example
+│   ├── Dockerfile
+│   └── README.md
+│
+├── frontend-service/                 # React + TypeScript + Vite
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── SearchBar.jsx
-│   │   │   ├── PersonalisationSliders.jsx
-│   │   │   ├── RecommendationDisplay.jsx
-│   │   │   ├── ProductDisambiguation.jsx
-│   │   │   ├── LoadingState.jsx
-│   │   │   └── ErrorState.jsx
+│   │   │   ├── SearchBar.tsx         # Product search input
+│   │   │   ├── PersonalisationSliders.tsx
+│   │   │   ├── RecommendationDisplay.tsx
+│   │   │   ├── ProductDisambiguation.tsx
+│   │   │   ├── LoadingState.tsx
+│   │   │   ├── ErrorState.tsx
+│   │   │   └── ui/                   # shadcn/ui components
 │   │   ├── hooks/
-│   │   │   └── useRecommendation.js
+│   │   │   └── useRecommendation.ts
 │   │   ├── services/
-│   │   │   ├── api.js
-│   │   │   └── marketplaceLinks.js
+│   │   │   ├── api.ts                # HTTP client for backend
+│   │   │   └── marketplaceLinks.ts
 │   │   ├── lib/
-│   │   │   ├── utils.js
-│   │   │   ├── types.ts
-│   │   │   └── constants.js
-│   │   ├── App.jsx
+│   │   │   ├── utils.ts
+│   │   │   ├── types.ts              # TypeScript interfaces (mirror Go types)
+│   │   │   └── constants.ts
+│   │   ├── App.tsx
 │   │   ├── index.css
-│   │   └── main.jsx
+│   │   └── main.tsx
 │   ├── .env.example
-│   ├── .env.production
 │   ├── package.json
-│   ├── vite.config.js
-│   └── tailwind.config.js
-│
-├── backend/
-│   ├── main.go
-│   ├── config/
-│   │   └── config.go
-│   ├── handlers/
-│   │   ├── recommendation.go
-│   │   └── health.go
-│   ├── services/
-│   │   ├── product_catalog.go
-│   │   ├── price_search.go
-│   │   ├── llm_client.go
-│   │   └── cache.go
-│   ├── models/
-│   │   └── types.go
-│   ├── middleware/
-│   │   └── cors.go
-│   ├── products.yaml
-│   ├── .env.example
-│   ├── go.mod
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
 │   ├── Dockerfile
 │   └── README.md
 │
 ├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── API.md
-│   ├── SETUP.md
-│   └── TESTING.md
+│   ├── ARCHITECTURE.md                # Detailed module architecture
+│   ├── API.md                         # HTTP API documentation
+│   ├── SETUP.md                       # Developer setup guide
+│   ├── TESTING.md                     # Testing procedures
+│   └── DEPLOYMENT.md                  # Deployment guide
 │
-├── CLAUDE.md
-├── plan.md
-└── secondsens.md (original spec)
+├── .env.example                       # Shared environment variables
+├── CLAUDE.md                          # Project instructions
+├── plan.md                            # This file
+└── secondsens.md                      # Original specification
 ```
+
+### Module Responsibilities:
+
+| Module | Responsibility | Input | Output |
+|--------|-----------------|-------|--------|
+| **Products** | Match user query to product catalog | Query string | Canonical product name or disambiguation list |
+| **Prices** | Fetch prices across condition tiers | Product name | Price data (arrays per condition) |
+| **Recommendations** | Rank options & generate reasoning | Prices + preferences | RecommendationResponse (rankings, reasoning, stats) |
+| **Shared** | Infrastructure for all modules | - | Cache, config, types, HTTP utilities |
 
 ---
 
 ## Key Decisions & Rationale
 
-1. **Go Backend:** Better concurrency and performance than Python for this use case
-2. **LLM Web Search:** Fastest to implement, works across any product without custom scraping
-3. **In-Memory Cache (MVP):** Simple, works for personal project. Upgrade to Redis later if needed
-4. **React Frontend:** Modern, component-based, Vite for fast development
-5. **No Database (MVP):** Cache only, no persistence needed for MVP
-6. **24hr Cache TTL:** Balances freshness vs. API costs
-7. **Product Catalog YAML:** Simple, version-controllable, easy to iterate
+### Architecture
+1. **Modular Monolith:** Single Go binary with clear module separation. Simpler deployment than microservices, no inter-process communication overhead, easier to debug and test initially.
+2. **Module Boundaries:** Each module (products, prices, recommendations) owns its business logic but shares infrastructure (cache, config, types). Modules import each other directly.
+3. **Single HTTP Entry Point:** Frontend calls `/api/recommend` which orchestrates all modules internally. No need for service-to-service HTTP calls.
+
+### Technology Choices
+4. **Single Go Binary:** All modules compile into one executable. Easy deployment, minimal operational complexity for MVP.
+5. **React + TypeScript + Vite:** Modern frontend with type safety and fast HMR development experience.
+6. **shadcn/ui Components:** Pre-built accessible components save development time vs. custom Tailwind components.
+7. **Shared Domain Types:** Single source of truth for data types (Go structs) used across all modules.
+
+### Data & Performance
+8. **LLM Web Search (MVP):** Fastest to implement, works across any product without custom scraping. Migrate to dedicated scrapers only if costs become prohibitive.
+9. **In-Memory Cache (MVP):** Simple for personal project, no external dependencies. Upgrade to Redis later if needed.
+10. **24hr Cache TTL:** Balances freshness vs. API costs (used prices don't change hourly).
+11. **YAML Product Catalog:** Simple, version-controllable, easy to iterate and expand.
+
+### Migration Path
+12. **Can migrate to microservices later:** If a single module becomes a bottleneck, extract it to a separate service with minimal refactoring (modules already have clear boundaries).
+13. **No architectural lock-in:** Module structure is identical to microservice structure—just extract a module's package into its own binary and add HTTP handlers.
 
 ---
 

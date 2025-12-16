@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a React + TypeScript + Vite application using Tailwind CSS v4 for styling. The project is configured to use shadcn/ui components with the "new-york" style. Always check if a shadcn/ui component can be used before created a UI component in tailwind
+This is a React + TypeScript + Vite application using Tailwind CSS v4 for styling. The project is configured to use shadcn/ui components with the "new-york" style. Always check if a shadcn/ui component can be used before created a UI component in tailwind.
+Refer to plan.md for the full implementation task for every task.
 
 ## Development Commands
 
@@ -51,16 +52,6 @@ shadcn/ui component aliases (from `components.json`):
 - `@/ui` - UI component subdirectory
 - `@/hooks` - React hooks directory
 
-### Project Structure
-```
-src/
-├── App.tsx          # Main application component
-├── main.tsx         # Application entry point with React StrictMode
-├── index.css        # Global styles and Tailwind directives
-├── assets/          # Static assets (images, icons)
-└── lib/
-    └── utils.ts     # Utility functions (cn helper for class merging)
-```
 
 ### Key Utilities
 - `cn()` function in `src/lib/utils.ts`: Merges Tailwind classes using `clsx` and `tailwind-merge` for proper class deduplication and precedence.

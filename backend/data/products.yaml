@@ -1,0 +1,205 @@
+products:
+  # Gaming Mice (8)
+  - id: logitech_gpro_x_superlight
+    canonical_name: "Logitech G Pro X Superlight"
+    category: gaming_mouse
+    aliases:
+      - "gpro superlight"
+      - "g pro x sl"
+      - "910-005878"
+      - "logitech superlight"
+
+  - id: razer_deathadder_v3
+    canonical_name: "Razer DeathAdder V3"
+    category: gaming_mouse
+    aliases:
+      - "deathadder v3"
+      - "deathadder 3"
+      - "da v3"
+      - "razer da v3"
+
+  - id: finalmouse_starlight_12
+    canonical_name: "Finalmouse Starlight-12"
+    category: gaming_mouse
+    aliases:
+      - "starlight 12"
+      - "starlight-12"
+      - "finalmouse starlight"
+
+  - id: glorious_model_o
+    canonical_name: "Glorious Model O"
+    category: gaming_mouse
+    aliases:
+      - "model o"
+      - "glorious o"
+      - "model-o"
+
+  - id: corsair_m65_elite
+    canonical_name: "Corsair M65 Elite"
+    category: gaming_mouse
+    aliases:
+      - "m65 elite"
+      - "corsair m65"
+      - "m65"
+
+  - id: steelseries_prime
+    canonical_name: "SteelSeries Prime"
+    category: gaming_mouse
+    aliases:
+      - "steelseries prime"
+      - "ss prime"
+
+  - id: zowie_ec2
+    canonical_name: "BenQ Zowie EC2"
+    category: gaming_mouse
+    aliases:
+      - "zowie ec2"
+      - "ec2"
+      - "benq ec2"
+
+  - id: logitech_g502_x
+    canonical_name: "Logitech G502 X"
+    category: gaming_mouse
+    aliases:
+      - "g502 x"
+      - "g502x"
+      - "logitech g502 x"
+
+  # Mechanical Keyboards (8)
+  - id: keychron_q1
+    canonical_name: "Keychron Q1"
+    category: mechanical_keyboard
+    aliases:
+      - "keychron q1"
+      - "q1"
+
+  - id: ducky_one_3
+    canonical_name: "Ducky One 3"
+    category: mechanical_keyboard
+    aliases:
+      - "ducky one 3"
+      - "ducky one3"
+      - "one 3"
+
+  - id: corsair_k70
+    canonical_name: "Corsair K70"
+    category: mechanical_keyboard
+    aliases:
+      - "k70"
+      - "corsair k70"
+      - "corsair k70 rgb"
+
+  - id: razer_blackwidow_v4
+    canonical_name: "Razer BlackWidow V4"
+    category: mechanical_keyboard
+    aliases:
+      - "blackwidow v4"
+      - "blackwidow 4"
+      - "bw v4"
+
+  - id: varmilo_va87m
+    canonical_name: "Varmilo VA87M"
+    category: mechanical_keyboard
+    aliases:
+      - "va87m"
+      - "varmilo va87"
+
+  - id: leopold_fc980m
+    canonical_name: "Leopold FC980M"
+    category: mechanical_keyboard
+    aliases:
+      - "fc980m"
+      - "leopold fc980"
+
+  - id: topre_realforce
+    canonical_name: "Topre Realforce"
+    category: mechanical_keyboard
+    aliases:
+      - "realforce"
+      - "topre realforce"
+
+  - id: hhkb_professional
+    canonical_name: "HHKB Professional"
+    category: mechanical_keyboard
+    aliases:
+      - "hhkb professional"
+      - "hhkb"
+
+  # Gaming Headsets (6)
+  - id: steelseries_arctis_nova_pro
+    canonical_name: "SteelSeries Arctis Nova Pro"
+    category: gaming_headset
+    aliases:
+      - "arctis nova pro"
+      - "nova pro"
+      - "steelseries nova pro"
+
+  - id: hyperx_cloud_iii
+    canonical_name: "HyperX Cloud III"
+    category: gaming_headset
+    aliases:
+      - "cloud iii"
+      - "cloud 3"
+      - "hyperx cloud"
+
+  - id: sennheiser_hd560s
+    canonical_name: "Sennheiser HD 560S"
+    category: gaming_headset
+    aliases:
+      - "hd 560s"
+      - "hd560s"
+      - "sennheiser hd560"
+
+  - id: audio_technica_ath_m50x
+    canonical_name: "Audio Technica ATH-M50x"
+    category: gaming_headset
+    aliases:
+      - "ath-m50x"
+      - "ath m50x"
+      - "m50x"
+
+  - id: beyerdynamic_dt990
+    canonical_name: "Beyerdynamic DT 990"
+    category: gaming_headset
+    aliases:
+      - "dt 990"
+      - "dt990"
+      - "beyerdynamic 990"
+
+  - id: astro_a50
+    canonical_name: "Astro A50"
+    category: gaming_headset
+    aliases:
+      - "a50"
+      - "astro a50"
+
+  # Mousepads (4)
+  - id: artisan_hien
+    canonical_name: "Artisan Hien"
+    category: mousepad
+    aliases:
+      - "hien"
+      - "artisan hien"
+
+  - id: steelseries_qck
+    canonical_name: "SteelSeries QcK"
+    category: mousepad
+    aliases:
+      - "qck"
+      - "steelseries qck"
+      - "ss qck"
+
+  - id: zowie_gsr
+    canonical_name: "BenQ Zowie GSR"
+    category: mousepad
+    aliases:
+      - "gsr"
+      - "zowie gsr"
+      - "benq gsr"
+
+  - id: razer_gigantus
+    canonical_name: "Razer Gigantus"
+    category: mousepad
+    aliases:
+      - "gigantus"
+      - "razer gigantus"
