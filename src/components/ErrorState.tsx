@@ -1,3 +1,6 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+
 /**
  * ErrorState - Error display component with retry option
  *
@@ -19,31 +22,29 @@ export function ErrorState({
   suggestion?: string;
 }) {
   return (
-    <div className="w-full bg-red-50 border border-red-200 rounded-lg p-6 space-y-4">
-      {/* Error header */}
-      <div className="flex items-start gap-3">
-        <div className="text-2xl">⚠️</div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-red-900">Something went wrong</h3>
-          <p className="text-red-800 mt-1">{error}</p>
-        </div>
-      </div>
+    <div className="w-full space-y-4">
+      {/* Error alert */}
+      <Alert variant="destructive">
+        <AlertTitle>Something went wrong</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
 
       {/* Suggestion */}
       {suggestion && (
-        <div className="bg-red-100 rounded px-3 py-2 text-sm text-red-900">
+        <div className="bg-secondary/50 rounded px-3 py-2 text-sm">
           💡 {suggestion}
         </div>
       )}
 
       {/* Retry button */}
-      <button
+      <Button
         onClick={onRetry}
-        className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+        className="w-full"
+        variant="destructive"
         aria-label="Retry the operation"
       >
         Try Again
-      </button>
+      </Button>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import { Progress } from '@/components/ui/progress';
+
 /**
  * LoadingState - Visual feedback component for async operations
  *
@@ -16,27 +18,22 @@ export function LoadingState({
   progress?: number;
 }) {
   return (
-    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm mx-4 text-center space-y-6">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+      <div className="bg-card rounded-lg shadow-lg p-8 max-w-sm mx-4 text-center space-y-6 border border-border">
         {/* Spinner */}
         <div className="flex justify-center">
           <div className="relative w-16 h-16">
-            <div className="absolute inset-0 border-4 border-gray-200 rounded-full" />
-            <div className="absolute inset-0 border-4 border-transparent border-t-blue-600 rounded-full animate-spin" />
+            <div className="absolute inset-0 border-4 border-muted rounded-full" />
+            <div className="absolute inset-0 border-4 border-transparent border-t-primary rounded-full animate-spin" />
           </div>
         </div>
 
         {/* Message */}
-        <p className="text-gray-700 font-medium">{message}</p>
+        <p className="text-foreground font-medium">{message}</p>
 
         {/* Progress bar (optional) */}
         {progress !== undefined && (
-          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-            <div
-              className="bg-blue-600 h-full transition-all duration-300"
-              style={{ width: `${Math.min(progress, 100)}%` }}
-            />
-          </div>
+          <Progress value={Math.min(progress, 100)} className="w-full" />
         )}
       </div>
     </div>

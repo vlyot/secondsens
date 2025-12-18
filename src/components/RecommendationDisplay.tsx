@@ -1,4 +1,8 @@
 import type { RecommendationResponse, RankedOption } from '@/lib/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 /**
  * RecommendationDisplay - Shows ranked recommendations and market statistics
@@ -22,17 +26,17 @@ export function RecommendationDisplay({
     <div className="w-full space-y-8">
       {/* Product header */}
       <div>
-        <h2 className="text-3xl font-bold text-gray-900">{data.product_name}</h2>
+        <h2 className="text-3xl font-bold">{data.product_name}</h2>
         <div className="flex items-center gap-3 mt-2">
-          <span className={`px-3 py-1 rounded-full text-sm font-semibold text-white ${getConfidenceColor(data.confidence_score)}`}>
+          <Badge variant={getConfidenceVariant(data.confidence_score)}>
             {data.confidence_score} Confidence
-          </span>
+          </Badge>
         </div>
       </div>
 
       {/* Rankings */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900">Top Recommendations</h3>
+        <h3 className="text-lg font-semibold">Top Recommendations</h3>
         <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
           {data.recommendations.map((rec) => (
             <RankingCard
@@ -46,15 +50,15 @@ export function RecommendationDisplay({
 
       {/* Market stats */}
       <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-gray-900">Market Statistics</h3>
+        <h3 className="text-lg font-semibold">Market Statistics</h3>
         <MarketStatsTable data={data} />
       </div>
 
       {/* Reasoning */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-900 mb-2">Why This Recommendation?</h4>
-        <p className="text-blue-800 leading-relaxed">{data.reasoning}</p>
-      </div>
+      <Alert>
+        <AlertTitle>Why This Recommendation?</AlertTitle>
+        <AlertDescription>{data.reasoning}</AlertDescription>
+      </Alert>
     </div>
   );
 }
@@ -74,63 +78,65 @@ function RankingCard({
   onFindListings: (condition: string) => void;
 }) {
   return (
-    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
-      {/* Rank badge */}
-      <div className="mb-3">
-        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm">
-          #{recommendation.rank}
-        </span>
-      </div>
-
-      {/* Condition */}
-      <h4 className="text-lg font-semibold text-gray-900 mb-3">{recommendation.condition}</h4>
-
-      {/* Prices */}
-      <div className="space-y-2 mb-4 bg-gray-50 rounded p-3">
-        <div className="flex justify-between items-baseline">
-          <span className="text-gray-600">Average Price:</span>
-          <span className="text-2xl font-bold text-green-600">
-            £{formatPrice(recommendation.avg_price)}
-          </span>
-        </div>
-        <div className="text-sm text-gray-600">
-          Range: £{formatPrice(recommendation.price_range.min)} - £{formatPrice(recommendation.price_range.max)}
-        </div>
-      </div>
-
-      {/* Savings */}
-      <div className="border-t border-gray-200 pt-3 mb-4">
-        <div className="text-sm font-medium text-gray-700 mb-2">Savings vs. New:</div>
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <div className="text-lg font-bold text-orange-600">
-              £{formatPrice(recommendation.savings_vs_new.absolute)}
-            </div>
-            <div className="text-xs text-gray-600">Absolute</div>
-          </div>
-          <div className="flex-1">
-            <div className="text-lg font-bold text-orange-600">
-              {recommendation.savings_vs_new.percent}%
-            </div>
-            <div className="text-xs text-gray-600">Off RRP</div>
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle>{recommendation.condition}</CardTitle>
+            <CardDescription>
+              <Badge className="mt-2">#{recommendation.rank}</Badge>
+            </CardDescription>
           </div>
         </div>
-      </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Prices */}
+        <div className="bg-accent rounded p-3">
+          <div className="flex justify-between items-baseline mb-2">
+            <span className="text-sm text-muted-foreground">Average Price:</span>
+            <span className="text-2xl font-bold text-primary">
+              £{formatPrice(recommendation.avg_price)}
+            </span>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Range: £{formatPrice(recommendation.price_range.min)} - £{formatPrice(recommendation.price_range.max)}
+          </div>
+        </div>
 
-      {/* Justification */}
-      <p className="text-sm text-gray-700 italic mb-4 bg-yellow-50 p-3 rounded border border-yellow-200">
-        {recommendation.justification}
-      </p>
+        {/* Savings */}
+        <div className="border-t border-border pt-3">
+          <div className="text-sm font-medium mb-2">Savings vs. New:</div>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <div className="text-lg font-bold text-primary">
+                £{formatPrice(recommendation.savings_vs_new.absolute)}
+              </div>
+              <div className="text-xs text-muted-foreground">Absolute</div>
+            </div>
+            <div className="flex-1">
+              <div className="text-lg font-bold text-primary">
+                {recommendation.savings_vs_new.percent}%
+              </div>
+              <div className="text-xs text-muted-foreground">Off RRP</div>
+            </div>
+          </div>
+        </div>
 
-      {/* CTA Button */}
-      <button
-        onClick={() => onFindListings(recommendation.condition)}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
-        aria-label={`Find ${recommendation.condition} listings`}
-      >
-        Find Listings
-      </button>
-    </div>
+        {/* Justification */}
+        <p className="text-sm italic bg-secondary/50 p-3 rounded border border-border">
+          {recommendation.justification}
+        </p>
+
+        {/* CTA Button */}
+        <Button
+          onClick={() => onFindListings(recommendation.condition)}
+          className="w-full"
+          aria-label={`Find ${recommendation.condition} listings`}
+        >
+          Find Listings
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -142,35 +148,39 @@ function RankingCard({
  */
 function MarketStatsTable({ data }: { data: RecommendationResponse }) {
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
-      <table className="w-full">
-        <thead>
-          <tr className="bg-gray-50 border-b border-gray-200">
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Condition</th>
-            <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900">Avg Price</th>
-            <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900">Range</th>
-          </tr>
-        </thead>
-        <tbody>
-          {[
-            { tier: 'Brand New', stats: data.market_stats.brand_new },
-            { tier: 'Like New', stats: data.market_stats.like_new },
-            { tier: 'Good', stats: data.market_stats.good },
-            { tier: 'Well Used', stats: data.market_stats.well_used },
-          ].map((row) => (
-            <tr key={row.tier} className="border-b border-gray-100 hover:bg-gray-50">
-              <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.tier}</td>
-              <td className="px-4 py-3 text-right text-sm text-gray-700">
-                £{formatPrice(row.stats.avg_price)}
-              </td>
-              <td className="px-4 py-3 text-right text-sm text-gray-600">
-                £{formatPrice(row.stats.range.min)} - £{formatPrice(row.stats.range.max)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Card>
+      <CardContent className="p-0">
+        <div className="w-full overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-secondary border-b border-border">
+                <th className="px-4 py-3 text-left text-sm font-semibold">Condition</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold">Avg Price</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold">Range</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { tier: 'Brand New', stats: data.market_stats.brand_new },
+                { tier: 'Like New', stats: data.market_stats.like_new },
+                { tier: 'Good', stats: data.market_stats.good },
+                { tier: 'Well Used', stats: data.market_stats.well_used },
+              ].map((row) => (
+                <tr key={row.tier} className="border-b border-border hover:bg-accent/50">
+                  <td className="px-4 py-3 text-sm font-medium">{row.tier}</td>
+                  <td className="px-4 py-3 text-right text-sm text-muted-foreground">
+                    £{formatPrice(row.stats.avg_price)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm text-muted-foreground">
+                    £{formatPrice(row.stats.range.min)} - £{formatPrice(row.stats.range.max)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -185,21 +195,20 @@ function formatPrice(price: number): string {
 }
 
 /**
- * getConfidenceColor - Map confidence level to Tailwind color class
+ * getConfidenceVariant - Map confidence level to Badge variant
  *
  * @param confidence - Confidence level ("High", "Medium", "Low")
- * @returns Tailwind background color class
+ * @returns Badge variant type
  */
-function getConfidenceColor(confidence: string): string {
+function getConfidenceVariant(confidence: string): 'default' | 'destructive' {
   switch (confidence.toLowerCase()) {
     case 'high':
-      return 'bg-green-600';
     case 'medium':
-      return 'bg-yellow-600';
+      return 'default';
     case 'low':
-      return 'bg-orange-600';
+      return 'destructive';
     default:
-      return 'bg-gray-600';
+      return 'default';
   }
 }
 

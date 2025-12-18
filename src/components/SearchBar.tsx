@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 /**
  * SearchBar - Product search input component
  *
+ * Uses shadcn/ui Button and Input components for consistency.
  * Manages local query state and validates user input before submitting.
  * Disables input when API call is in progress (isLoading).
  *
@@ -41,23 +44,22 @@ export function SearchBar({
   return (
     <form onSubmit={handleSubmit} className="w-full">
       <div className="flex gap-2">
-        <input
+        <Input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
           disabled={isLoading}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Product search"
+          className="flex-1"
         />
-        <button
+        <Button
           type="submit"
           disabled={isLoading || !validateQuery(query)}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           aria-label="Get recommendation"
         >
           {isLoading ? 'Searching...' : 'Search'}
-        </button>
+        </Button>
       </div>
     </form>
   );

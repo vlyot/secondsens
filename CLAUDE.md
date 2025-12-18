@@ -83,4 +83,18 @@ ESLint is configured with flat config format using:
 
 ## Adding shadcn/ui Components
 
-This project is configured to use shadcn/ui components. To add new components, use the shadcn CLI (if installed) or manually add component files to `src/components/ui/` following the project's path alias structure. Refer to C:\Users\Admin\ .vscode\secondsens\llms.txt
+**⚠️ PRIORITY: Always use shadcn/ui components FIRST before writing custom Tailwind CSS.**
+
+This project is configured to use shadcn/ui components. To add new components:
+1. Check `@/llms.txt` for available shadcn/ui components
+2. Use shadcn CLI to add: `npx shadcn-ui@latest add <component-name>`
+3. Or manually add component files to `src/components/ui/` following the project's path alias structure
+4. Import and use the component with proper styling
+
+shadcn/ui components use Tailwind CSS internally, so you can still customize with Tailwind classes, but the component API is the foundation.
+
+**Component Priority Order:**
+1. ✅ shadcn/ui Button, Input, Dialog, Card, etc.
+2. ❌ Custom Tailwind-only components (only if no shadcn equivalent exists)
+
+See `@/llms.txt` for full documentation of available components.

@@ -1,4 +1,6 @@
 import type { Preferences } from '@/lib/types';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 
 /**
  * PersonalisationSliders - Three interactive sliders for user preferences
@@ -45,21 +47,21 @@ export function PersonalisationSliders({
 
   return (
     <div className="space-y-8 w-full">
-      <Slider
+      <SliderField
         label="Budget Flexibility"
         value={preferences.budget_flexibility}
         emoji={getEmojiForBudget(preferences.budget_flexibility)}
         onChange={(v) => handleChange('budget_flexibility', v)}
         description="0 = tight budget, 10 = very flexible"
       />
-      <Slider
+      <SliderField
         label="Condition Standards"
         value={preferences.condition_standards}
         emoji={getEmojiForCondition(preferences.condition_standards)}
         onChange={(v) => handleChange('condition_standards', v)}
         description="0 = any condition, 10 = pristine only"
       />
-      <Slider
+      <SliderField
         label="Hassle Tolerance"
         value={preferences.hassle_tolerance}
         emoji={getEmojiForHassle(preferences.hassle_tolerance)}
@@ -71,7 +73,7 @@ export function PersonalisationSliders({
 }
 
 /**
- * Slider - Reusable range input component
+ * SliderField - Reusable slider input component using shadcn/ui
  *
  * Sub-component for rendering individual slider with label, value display, and emoji.
  *
@@ -82,7 +84,7 @@ export function PersonalisationSliders({
  * @param description - Optional help text
  * @returns Rendered slider component
  */
-function Slider({
+function SliderField({
   label,
   value,
   emoji,
@@ -98,26 +100,23 @@ function Slider({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 text-base font-medium text-gray-900">
+        <Label className="flex items-center gap-2 text-base">
           <span className="text-2xl">{emoji}</span>
           {label}
-        </label>
-        <span className="text-lg font-semibold text-blue-600">{value}/10</span>
+        </Label>
+        <span className="text-lg font-semibold text-primary">{value}/10</span>
       </div>
-      {description && <p className="text-sm text-gray-600">{description}</p>}
-      <input
-        type="range"
-        min="0"
-        max="10"
-        value={value}
-        onChange={(e) => onChange(Number.parseInt(e.target.value, 10))}
-        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+      {description && <p className="text-sm text-muted-foreground">{description}</p>}
+      <Slider
+        value={[value]}
+        onValueChange={(v) => onChange(v[0])}
+        min={0}
+        max={10}
+        step={1}
         aria-label={label}
-        aria-valuemin={0}
-        aria-valuemax={10}
-        aria-valuenow={value}
+        className="w-full"
       />
-      <div className="flex justify-between text-xs text-gray-500">
+      <div className="flex justify-between text-xs text-muted-foreground">
         <span>Low</span>
         <span>High</span>
       </div>
