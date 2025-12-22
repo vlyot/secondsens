@@ -119,27 +119,27 @@ The system displays a ranked list of the top 3 condition options with clear just
 ┌───────────────────────────────────────────────┐
 │  🎯 Your Best Options (Ranked)                 │
 │                                                │
-│  🥇 LIKE NEW - £89                             │
-│     💰 Save £46 (34%) vs. new                  │
+│  🥇 LIKE NEW - S$89                            │
+│     💰 Save S$46 (34%) vs. new                 │
 │     ───────────────────────────────────────    │
 │     Best value for your preferences. You get   │
 │     essentially mint condition at a significant│
 │     discount, hitting the sweet spot between   │
 │     price and quality.                         │
 │                                                │
-│  🥈 GOOD - £72                                 │
-│     💰 Save £63 (47%) vs. new                  │
+│  🥈 GOOD - S$72                                │
+│     💰 Save S$63 (47%) vs. new                 │
 │     ───────────────────────────────────────    │
 │     Maximum savings if you can accept minor    │
 │     cosmetic wear. Functionally identical to   │
 │     new, just shows use.                       │
 │                                                │
-│  🥉 BRAND NEW - £135                           │
+│  🥉 BRAND NEW - S$135                          │
 │     💰 No savings (baseline)                   │
 │     ───────────────────────────────────────    │
 │     Full warranty and pristine condition.      │
 │     Worth it if peace of mind matters more     │
-│     than the £46 premium.                      │
+│     than the S$46 premium.                     │
 │                                                │
 │  💡 Why This Ranking?                          │
 │  Your moderate condition standards and budget  │
@@ -148,10 +148,10 @@ The system displays a ranked list of the top 3 condition options with clear just
 │  near-pristine quality.                        │
 │                                                │
 │  📊 Market Overview:                           │
-│  • Brand New:    £135 avg (£130-£140 range)   │
-│  • Like New:     £89 avg  (£85-£95 range)     │
-│  • Good:         £72 avg  (£68-£78 range)     │
-│  • Well Used:    £58 avg  (£52-£65 range)     │
+│  • Brand New:    S$135 avg (S$130-S$140 range) │
+│  • Like New:     S$89 avg  (S$85-S$95 range)   │
+│  • Good:         S$72 avg  (S$68-S$78 range)   │
+│  • Well Used:    S$58 avg  (S$52-S$65 range)   │
 │                                                │
 │  Confidence: High ✓                            │
 │  (Based on stable pricing and good availability)│
@@ -165,7 +165,7 @@ The system displays a ranked list of the top 3 condition options with clear just
 1. **Ranked Options (Top 3):**
    - Condition name (clearly labelled)
    - Average price
-   - Savings vs. new (absolute £ and percentage)
+   - Savings vs. new (absolute S$ and percentage)
    - 2-3 sentence justification
 
 2. **Overall Reasoning:**
@@ -328,14 +328,14 @@ This is the core data aggregation component. Two implementation approaches:
 
 **Cons:**
 - ❌ Slower (20-40 seconds per search)
-- ❌ Higher cost per query (~£0.10-0.15)
+- ❌ Higher cost per query (~S$0.15-0.22)
 - ❌ Potential for hallucinated prices (though rare with web search tools)
 - ❌ Less control over data sources
 
 **Mitigation for Cons:**
 - Cache results (same item shouldn't be re-searched within 6 hours)
 - Add validation (reject prices >2x or <0.5x median)
-- Budget for ~100 searches/month = £10-15
+- Budget for ~100 searches/month = S$15-22
 
 ---
 
@@ -351,13 +351,13 @@ This is the core data aggregation component. Two implementation approaches:
 - **BeautifulSoup4** (HTML parsing)
 - **Playwright** (for JS-heavy sites like Facebook Marketplace)
 - **eBay Finding API** (free tier: 5,000 calls/day)
-- **Rainforest API** (paid Amazon scraper, ~£0.005/request)
-- **ScraperAPI** (proxy rotation, handles anti-bot, ~£0.001/request)
+- **Rainforest API** (paid Amazon scraper, ~S$0.007/request)
+- **ScraperAPI** (proxy rotation, handles anti-bot, ~S$0.0015/request)
 
 **Pros:**
 - ✅ Faster (2-5 seconds per search)
 - ✅ More reliable data structure
-- ✅ Lower cost at scale (~£0.01-0.02/search)
+- ✅ Lower cost at scale (~S$0.015-0.03/search)
 - ✅ Full control over data sources
 
 **Cons:**
@@ -390,7 +390,7 @@ This component takes price data + user preferences and generates the ranked reco
 
 3. **Price Data Included:**
    - LLM sees actual numbers, not just user input
-   - Enables data-driven reasoning (e.g., "only £5 more for Like New vs Good")
+   - Enables data-driven reasoning (e.g., "only S$5 more for Like New vs Good")
 
 4. **Confidence Scoring:**
    - Helps user calibrate trust in recommendation
@@ -522,7 +522,7 @@ Critical for cost reduction and speed:
 **Cost Optimization:**
 - All services using FREE tiers
 - Estimated cost: **$0-5/month** for 100-200 searches
-- vs. original estimate of £7-15/month for 50 searches
+- vs. original estimate of S$10-22/month for 50 searches
 
 ---
 
@@ -690,7 +690,7 @@ Only pursue if Phase 4 validates the tool is genuinely useful.
 
 **Potential Features:**
 - User accounts & saved searches
-- Price alert emails ("G Pro X dropped to £85 in Like New")
+- Price alert emails ("G Pro X dropped to S$85 in Like New")
 - Historical price charts
 - Expand beyond gaming peripherals (phones, laptops, cameras)
 - Browser extension (see Extension section below)
@@ -882,21 +882,21 @@ export const API_URL = import.meta.env.PROD
 ### Cost Estimates (Updated with Free Tier Strategy)
 
 **MVP Personal Project (100-200 searches/month) - OPTIMIZED:**
-- LLM API calls (Gemini Flash or Groq): **£0** (free tier: 1500 req/day)
-- Price search (eBay API + web scraping): **£0** (free tier: 5000 calls/day)
-- Cache (Upstash Redis): **£0** (free tier: 10k commands/day)
-- Hosting Frontend (Cloudflare Pages): **£0** (unlimited bandwidth)
-- Hosting Backend (Fly.io or CF Workers): **£0** (free tier sufficient)
-- **Total: £0-5/month** (only if exceeding free tiers)
+- LLM API calls (Gemini Flash or Groq): **S$0** (free tier: 1500 req/day)
+- Price search (eBay API + web scraping): **S$0** (free tier: 5000 calls/day)
+- Cache (Upstash Redis): **S$0** (free tier: 10k commands/day)
+- Hosting Frontend (Cloudflare Pages): **S$0** (unlimited bandwidth)
+- Hosting Backend (Fly.io or CF Workers): **S$0** (free tier sufficient)
+- **Total: S$0-7/month** (only if exceeding free tiers)
 
-**Original estimate was £7-15/month for 50 searches - now 4x searches for FREE**
+**Original estimate was S$10-22/month for 50 searches - now 4x searches for FREE**
 
 **If Scaling to 500 searches/month:**
-- LLM costs (if exceeding free tier): £10-20/month
-- Hosting (still free or minimal): £0-10/month
-- Cache (upgrade if needed): £0-5/month
-- **Total: £10-35/month**
-- **Revenue needed:** ~£50-75/month to break even (vs. original £100-150)
+- LLM costs (if exceeding free tier): S$15-30/month
+- Hosting (still free or minimal): S$0-15/month
+- Cache (upgrade if needed): S$0-7/month
+- **Total: S$15-52/month**
+- **Revenue needed:** ~S$75-110/month to break even (vs. original S$150-220)
 
 **Cost Optimization Strategies:**
 1. **Aggressive caching**: 72-hour TTL instead of 24 hours (prices don't change that fast)
@@ -1008,16 +1008,16 @@ User: Logitech G Pro X Superlight
 Bot: [3 second delay]
 Bot: 🎯 Recommendation: Buy Like New
 
-💰 £89 (save £46 vs. new)
+💰 S$89 (save S$46 vs. new)
 
-Your best bet given typical preferences. 
-Like New condition is essentially pristine 
+Your best bet given typical preferences.
+Like New condition is essentially pristine
 while saving you 34%.
 
 Rankings:
-🥇 Like New - £89
-🥈 Good - £72
-🥉 Brand New - £135
+🥇 Like New - S$89
+🥈 Good - S$72
+🥉 Brand New - S$135
 
 [Find Like New Listings 🔗]
 ```
@@ -1040,7 +1040,7 @@ Rankings:
 - **Cons:** Creates conflict of interest, low margins
 
 ### Option 2: Freemium
-- 3 free searches/month, £5/month for unlimited
+- 3 free searches/month, S$7/month for unlimited
 - **Pros:** Directly captures value
 - **Cons:** High friction, hard to justify for sporadic use
 
@@ -1088,7 +1088,7 @@ Rankings:
 **Quantitative:**
 - [ ] Tool used for 5+ real purchases by team
 - [ ] Recommendation accuracy >75% (subjectively judged)
-- [ ] API costs <£20/month
+- [ ] API costs <S$30/month
 - [ ] Avg response time <45 seconds
 
 **Qualitative:**
@@ -1116,8 +1116,8 @@ Rankings:
 - Confidence score correlates with user satisfaction
 
 **Financial:**
-- If monetized: £200/month revenue by month 6
-- Cost per search <£0.10
+- If monetized: S$300/month revenue by month 6
+- Cost per search <S$0.15
 
 ---
 

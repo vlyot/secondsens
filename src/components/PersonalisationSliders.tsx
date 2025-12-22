@@ -1,6 +1,7 @@
 import type { Preferences } from '@/lib/types';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
+import { Muted, Small, Emoji } from '@/components/ui/typography';
 
 /**
  * PersonalisationSliders - Three interactive sliders for user preferences
@@ -101,12 +102,12 @@ function SliderField({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <Label className="flex items-center gap-2 text-base">
-          <span className="text-2xl">{emoji}</span>
+          <Emoji>{emoji}</Emoji>
           {label}
         </Label>
-        <span className="text-lg font-semibold text-primary">{value}/10</span>
+        <Small className="text-primary">{value}/10</Small>
       </div>
-      {description && <p className="text-sm text-muted-foreground">{description}</p>}
+      {description && <Muted className="mt-0">{description}</Muted>}
       <Slider
         value={[value]}
         onValueChange={(v) => onChange(v[0])}
@@ -116,9 +117,9 @@ function SliderField({
         aria-label={label}
         className="w-full"
       />
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>Low</span>
-        <span>High</span>
+      <div className="flex justify-between">
+        <Small className="text-muted-foreground">Low</Small>
+        <Small className="text-muted-foreground">High</Small>
       </div>
     </div>
   );

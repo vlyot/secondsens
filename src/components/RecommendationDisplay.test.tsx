@@ -157,10 +157,10 @@ describe('RecommendationDisplay Component', () => {
       render(<RecommendationDisplay data={mockData} onFindListings={mockOnFindListings} />)
 
       // Check that prices are formatted with .00
-      const prices = screen.getAllByText(/£\d+\.\d{2}/)
+      const prices = screen.getAllByText(/S\$\d+\.\d{2}/)
       expect(prices.length).toBeGreaterThan(0)
       prices.forEach((price) => {
-        expect(price.textContent).toMatch(/£\d+\.\d{2}/)
+        expect(price.textContent).toMatch(/S\$\d+\.\d{2}/)
       })
     })
   })

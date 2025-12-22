@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { H3, Muted, Small, Display, PriceDisplay, StatDisplay } from '@/components/ui/typography';
 
 /**
  * RecommendationDisplay - Shows ranked recommendations and market statistics
@@ -26,7 +27,7 @@ export function RecommendationDisplay({
     <div className="w-full space-y-8">
       {/* Product header */}
       <div>
-        <h2 className="text-3xl font-bold">{data.product_name}</h2>
+        <Display>{data.product_name}</Display>
         <div className="flex items-center gap-3 mt-2">
           <Badge variant={getConfidenceVariant(data.confidence_score)}>
             {data.confidence_score} Confidence
@@ -36,7 +37,7 @@ export function RecommendationDisplay({
 
       {/* Rankings */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Top Recommendations</h3>
+        <H3 className="border-0 scroll-m-0">Top Recommendations</H3>
         <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
           {data.recommendations.map((rec) => (
             <RankingCard
@@ -50,7 +51,7 @@ export function RecommendationDisplay({
 
       {/* Market stats */}
       <div className="space-y-3">
-        <h3 className="text-lg font-semibold">Market Statistics</h3>
+        <H3 className="border-0 scroll-m-0">Market Statistics</H3>
         <MarketStatsTable data={data} />
       </div>
 
@@ -93,39 +94,39 @@ function RankingCard({
         {/* Prices */}
         <div className="bg-accent rounded p-3">
           <div className="flex justify-between items-baseline mb-2">
-            <span className="text-sm text-muted-foreground">Average Price:</span>
-            <span className="text-2xl font-bold text-primary">
-              £{formatPrice(recommendation.avg_price)}
-            </span>
+            <Muted className="mt-0">Average Price:</Muted>
+            <PriceDisplay>
+              S${formatPrice(recommendation.avg_price)}
+            </PriceDisplay>
           </div>
-          <div className="text-sm text-muted-foreground">
-            Range: £{formatPrice(recommendation.price_range.min)} - £{formatPrice(recommendation.price_range.max)}
-          </div>
+          <Muted className="mt-0">
+            Range: S${formatPrice(recommendation.price_range.min)} - S${formatPrice(recommendation.price_range.max)}
+          </Muted>
         </div>
 
         {/* Savings */}
         <div className="border-t border-border pt-3">
-          <div className="text-sm font-medium mb-2">Savings vs. New:</div>
+          <Small className="mb-2">Savings vs. New:</Small>
           <div className="flex gap-4">
             <div className="flex-1">
-              <div className="text-lg font-bold text-primary">
-                £{formatPrice(recommendation.savings_vs_new.absolute)}
-              </div>
-              <div className="text-xs text-muted-foreground">Absolute</div>
+              <StatDisplay>
+                S${formatPrice(recommendation.savings_vs_new.absolute)}
+              </StatDisplay>
+              <Muted className="mt-0 text-xs">Absolute</Muted>
             </div>
             <div className="flex-1">
-              <div className="text-lg font-bold text-primary">
+              <StatDisplay>
                 {recommendation.savings_vs_new.percent}%
-              </div>
-              <div className="text-xs text-muted-foreground">Off RRP</div>
+              </StatDisplay>
+              <Muted className="mt-0 text-xs">Off RRP</Muted>
             </div>
           </div>
         </div>
 
         {/* Justification */}
-        <p className="text-sm italic bg-secondary/50 p-3 rounded border border-border">
+        <Muted className="italic bg-secondary/50 p-3 rounded border border-border mt-0">
           {recommendation.justification}
-        </p>
+        </Muted>
 
         {/* CTA Button */}
         <Button
@@ -154,9 +155,9 @@ function MarketStatsTable({ data }: { data: RecommendationResponse }) {
           <table className="w-full">
             <thead>
               <tr className="bg-secondary border-b border-border">
-                <th className="px-4 py-3 text-left text-sm font-semibold">Condition</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold">Avg Price</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold">Range</th>
+                <th className="px-4 py-3 text-left"><Small>Condition</Small></th>
+                <th className="px-4 py-3 text-right"><Small>Avg Price</Small></th>
+                <th className="px-4 py-3 text-right"><Small>Range</Small></th>
               </tr>
             </thead>
             <tbody>
@@ -167,13 +168,9 @@ function MarketStatsTable({ data }: { data: RecommendationResponse }) {
                 { tier: 'Well Used', stats: data.market_stats.well_used },
               ].map((row) => (
                 <tr key={row.tier} className="border-b border-border hover:bg-accent/50">
-                  <td className="px-4 py-3 text-sm font-medium">{row.tier}</td>
-                  <td className="px-4 py-3 text-right text-sm text-muted-foreground">
-                    £{formatPrice(row.stats.avg_price)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-sm text-muted-foreground">
-                    £{formatPrice(row.stats.range.min)} - £{formatPrice(row.stats.range.max)}
-                  </td>
+                  <td className="px-4 py-3"><Small>{row.tier}</Small></td>
+                  <td className="px-4 py-3 text-right"><Muted className="mt-0">S${formatPrice(row.stats.avg_price)}</Muted></td>
+                  <td className="px-4 py-3 text-right"><Muted className="mt-0">S${formatPrice(row.stats.range.min)} - S${formatPrice(row.stats.range.max)}</Muted></td>
                 </tr>
               ))}
             </tbody>

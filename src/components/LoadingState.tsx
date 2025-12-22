@@ -1,4 +1,5 @@
 import { Progress } from '@/components/ui/progress';
+import { Large } from '@/components/ui/typography';
 
 /**
  * LoadingState - Visual feedback component for async operations
@@ -29,7 +30,7 @@ export function LoadingState({
         </div>
 
         {/* Message */}
-        <p className="text-foreground font-medium">{message}</p>
+        <Large className="text-foreground">{message}</Large>
 
         {/* Progress bar (optional) */}
         {progress !== undefined && (

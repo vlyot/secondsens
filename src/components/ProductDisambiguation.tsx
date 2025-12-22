@@ -1,6 +1,7 @@
 import type { Product } from '@/lib/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Small, Medium } from '@/components/ui/typography';
 
 /**
  * ProductDisambiguation - Modal for selecting from multiple product matches
@@ -40,13 +41,13 @@ export function ProductDisambiguation({
               className="w-full text-left px-4 py-3 rounded-lg hover:bg-accent transition-colors border border-border hover:border-primary/50 group"
               aria-label={`Select ${product.canonical_name}`}
             >
-              <div className="font-medium group-hover:text-primary">
+              <Medium className="group-hover:text-primary">
                 {product.canonical_name}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
+              </Medium>
+              <Small className="text-muted-foreground mt-1">
                 {product.category.replace('_', ' ')} • {product.aliases.slice(0, 2).join(', ')}
                 {product.aliases.length > 2 && `...`}
-              </div>
+              </Small>
             </button>
           ))}
         </div>

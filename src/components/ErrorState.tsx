@@ -1,5 +1,6 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Muted } from '@/components/ui/typography';
 
 /**
  * ErrorState - Error display component with retry option
@@ -31,9 +32,9 @@ export function ErrorState({
 
       {/* Suggestion */}
       {suggestion && (
-        <div className="bg-secondary/50 rounded px-3 py-2 text-sm">
+        <Muted className="bg-secondary/50 rounded px-3 py-2 mt-0">
           💡 {suggestion}
-        </div>
+        </Muted>
       )}
 
       {/* Retry button */}

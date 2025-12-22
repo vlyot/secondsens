@@ -1,100 +1,126 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Project-wide guidance for Claude Code when working in this repository.
+
+## Documentation Structure
+
+**MANDATORY**: Before making changes, ALWAYS read the relevant CLAUDE.md file first:
+
+- **[src/CLAUDE.md](src/CLAUDE.md)** - Frontend development (React, TypeScript, Tailwind, shadcn/ui)
+- **[backend/CLAUDE.md](backend/CLAUDE.md)** - Backend development (API, database, services)
+- **[docs/](docs/)** - Detailed references and examples:
+  - [typography.md](docs/typography.md) - Complete typography system reference
+  - [shadcn-workflow.md](docs/shadcn-workflow.md) - shadcn/ui workflow and philosophy
+  - [component-examples.md](docs/component-examples.md) - Real-world code patterns
+
+## Files to NEVER Edit
+
+**DO NOT TOUCH** these files unless explicitly requested:
+- `todo` - User's task tracking file
+- `plan.md` - Implementation planning document
 
 ## Project Overview
 
-This is a React + TypeScript + Vite application using Tailwind CSS v4 for styling. The project is configured to use shadcn/ui components with the "new-york" style. Always check if a shadcn/ui component can be used before created a UI component in tailwind.
-Refer to plan.md for the full implementation task for every task.
+React + TypeScript + Vite application using Tailwind CSS v4 and shadcn/ui ("new-york" style).
+
+**Key Technologies**:
+- React 19.2.0 with TypeScript
+- Vite 7.x for build tooling
+- Tailwind CSS v4 (via `@tailwindcss/vite` plugin)
+- shadcn/ui components with Lucide icons
+- FontAwesome icons (preferred for custom icons)
+
+**Critical Rules**:
+1. Always use typography components instead of raw HTML + Tailwind
+2. Check shadcn/ui before creating custom components
+3. Use FontAwesome icons - **NEVER use emojis in the UI**
+4. Maintain semantic HTML for accessibility
+5. Refer to `plan.md` for implementation tasks
 
 ## Development Commands
 
-### Start Development Server
 ```bash
-npm run dev
+npm run dev      # Start Vite dev server with HMR
+npm run build    # TypeScript build → Vite production build
+npm run lint     # Run ESLint
+npm run preview  # Preview production build locally
 ```
-Starts the Vite development server with HMR (Hot Module Replacement).
-
-### Build for Production
-```bash
-npm run build
-```
-Runs TypeScript compiler in build mode (`tsc -b`) followed by Vite build. Output goes to the `dist` directory.
-
-### Lint Code
-```bash
-npm run lint
-```
-Runs ESLint across the codebase with TypeScript and React-specific rules.
-
-### Preview Production Build
-```bash
-npm run preview
-```
-Previews the production build locally.
 
 ## Architecture
 
-### Tech Stack
-- **Frontend Framework**: React 19.2.0 with TypeScript
-- **Build Tool**: Vite 7.x with @vitejs/plugin-react
-- **Styling**: Tailwind CSS v4 with @tailwindcss/vite plugin
-- **UI Components**: shadcn/ui with Lucide icons
-- **Linting**: ESLint with TypeScript, React Hooks, and React Refresh plugins
-
 ### Path Aliases
-The project uses TypeScript path aliases configured in both `tsconfig.json` and `vite.config.ts`:
-- `@/*` maps to `./src/*`
-
-shadcn/ui component aliases (from `components.json`):
+- `@/*` → `./src/*`
 - `@/components` - UI components directory
-- `@/lib/utils` - Utility functions
+- `@/lib/utils` - Utility functions (includes `cn()` helper)
 - `@/ui` - UI component subdirectory
 - `@/hooks` - React hooks directory
 
-
 ### Key Utilities
-- `cn()` function in `src/lib/utils.ts`: Merges Tailwind classes using `clsx` and `tailwind-merge` for proper class deduplication and precedence.
+- **`cn()` in `src/lib/utils.ts`** - Merges Tailwind classes using `clsx` and `tailwind-merge` for proper class deduplication
 
-## Styling
-
-This project uses Tailwind CSS v4 with the following configuration:
-- **Base Color**: Stone
-- **CSS Variables**: Enabled
-- **Style**: shadcn/ui "new-york" variant
-- **Icon Library**: Lucide React
-
-The Tailwind plugin is integrated via Vite (`@tailwindcss/vite`), so no separate `tailwind.config.js` file is needed.
-
-## TypeScript Configuration
-
-The project uses TypeScript project references:
+### TypeScript Configuration
 - `tsconfig.json` - Root configuration with path aliases
 - `tsconfig.app.json` - Application source code configuration
 - `tsconfig.node.json` - Build tooling configuration
 
-## ESLint Configuration
-
-ESLint is configured with flat config format using:
+### ESLint Configuration
+Flat config format with:
 - TypeScript ESLint recommended rules
 - React Hooks recommended rules
 - React Refresh rules for Vite HMR
 - Global ignores for `dist` directory
 
-## Adding shadcn/ui Components
+## Styling
 
-**⚠️ PRIORITY: Always use shadcn/ui components FIRST before writing custom Tailwind CSS.**
+Tailwind CSS v4 configuration:
+- **Base Color**: Stone
+- **CSS Variables**: Enabled
+- **Style**: shadcn/ui "new-york" variant
+- **Icon Libraries**: Lucide React (shadcn/ui) + FontAwesome (custom icons)
 
-This project is configured to use shadcn/ui components. To add new components:
-1. Check `@/llms.txt` for available shadcn/ui components
-2. Use shadcn CLI to add: `npx shadcn-ui@latest add <component-name>`
-3. Or manually add component files to `src/components/ui/` following the project's path alias structure
-4. Import and use the component with proper styling
+The Tailwind plugin is integrated via Vite (`@tailwindcss/vite`), so no separate `tailwind.config.js` file is needed.
 
-shadcn/ui components use Tailwind CSS internally, so you can still customize with Tailwind classes, but the component API is the foundation.
+### Font System
 
-**Component Priority Order:**
-1. ✅ shadcn/ui Button, Input, Dialog, Card, etc.
-2. ❌ Custom Tailwind-only components (only if no shadcn equivalent exists)
+Modern system font stack configured in `src/index.css`:
 
-See `@/llms.txt` for full documentation of available components.
+```css
+--font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI',
+             'Roboto', 'Helvetica Neue', Arial, sans-serif,
+             'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+```
+
+**Benefits**: No external font downloads, native platform appearance, optimal readability.
+
+## Quick Reference
+
+### Typography
+Use semantic components from `@/components/ui/typography`:
+- **Headings**: H1, H2, H3, H4, Display
+- **Body**: P, Lead, Large, Small, Muted, Medium
+- **Special**: PriceDisplay, StatDisplay, Code, Blockquote, List
+
+See [docs/typography.md](docs/typography.md) for complete reference.
+
+### shadcn/ui Components
+Always check `@/llms.txt` for available components before creating custom ones.
+
+**Installation**: `npx shadcn-ui@latest add <component-name>`
+
+See [docs/shadcn-workflow.md](docs/shadcn-workflow.md) for complete workflow.
+
+### Component Patterns
+See [docs/component-examples.md](docs/component-examples.md) for:
+- Form implementations
+- Layout patterns
+- Data display
+- Navigation
+- Error/loading states
+
+## Getting Started
+
+1. Read [src/CLAUDE.md](src/CLAUDE.md) for frontend development guidelines
+2. Review [docs/typography.md](docs/typography.md) for typography system
+3. Review [docs/shadcn-workflow.md](docs/shadcn-workflow.md) for component workflow
+4. Check `plan.md` for current implementation tasks
+5. Never edit `todo` or `plan.md` unless explicitly requested
