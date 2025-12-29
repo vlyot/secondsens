@@ -1,12 +1,15 @@
+import { motion } from 'framer-motion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Muted } from '@/components/ui/typography';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { shakeVariants, staggerContainerVariants, staggerItemVariants } from '@/animations/variants';
 
 /**
- * ErrorState - Error display component with retry option
+ * ErrorState - Animated error display component with shake effect
  *
- * Shows error message and suggestion to user with actionable retry button.
- * Provides clear visual hierarchy with error styling.
+ * Shows error message with shake animation and suggestion to user.
+ * Provides clear visual hierarchy with error styling and retry button.
  *
  * @param error - Error message to display
  * @param onRetry - Callback when retry button is clicked
@@ -22,31 +25,44 @@ export function ErrorState({
   onRetry: () => void;
   suggestion?: string;
 }) {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
-    <div className="w-full space-y-4">
+    <motion.div
+      className="w-full space-y-4"
+      initial={prefersReducedMotion ? false : 'initial'}
+      animate="animate"
+      variants={prefersReducedMotion ? staggerContainerVariants : { ...staggerContainerVariants, ...shakeVariants }}
+    >
       {/* Error alert */}
-      <Alert variant="destructive">
-        <AlertTitle>Something went wrong</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
+      <motion.div variants={staggerItemVariants}>
+        <Alert variant="destructive">
+          <AlertTitle>Something went wrong</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </motion.div>
 
       {/* Suggestion */}
       {suggestion && (
-        <Muted className="bg-secondary/50 rounded px-3 py-2 mt-0">
-          💡 {suggestion}
-        </Muted>
+        <motion.div variants={staggerItemVariants}>
+          <Muted className="bg-secondary/50 rounded px-3 py-2 mt-0">
+            💡 {suggestion}
+          </Muted>
+        </motion.div>
       )}
 
       {/* Retry button */}
-      <Button
-        onClick={onRetry}
-        className="w-full"
-        variant="destructive"
-        aria-label="Retry the operation"
-      >
-        Try Again
-      </Button>
-    </div>
+      <motion.div variants={staggerItemVariants}>
+        <Button
+          onClick={onRetry}
+          className="w-full transition-all duration-200 hover:scale-105 active:scale-95"
+          variant="destructive"
+          aria-label="Retry the operation"
+        >
+          Try Again
+        </Button>
+      </motion.div>
+    </motion.div>
   );
 }
 

@@ -6,6 +6,7 @@ import ResultsPage from '@/pages/ResultsPage';
 import ErrorPage from '@/pages/ErrorPage';
 import ProductDisambiguation from '@/components/ProductDisambiguation';
 import LoadingState from '@/components/LoadingState';
+import BackgroundLayout from '@/components/layout/BackgroundLayout';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ModeToggle } from '@/components/mode-toggle';
 import { H1, P } from '@/components/ui/typography';
@@ -240,60 +241,62 @@ function App() {
       )}
 
       {state.currentStep !== 'landing' && state.currentStep !== 'search' && (
-        <div className="min-h-screen bg-gradient-to-br from-accent to-secondary p-4 md:p-8">
-          <div className="max-w-2xl mx-auto">
-            {/* Header */}
-            <header className="mb-8 text-center relative">
-              <div className="absolute right-0 top-0">
-                <ModeToggle />
+        <BackgroundLayout>
+          <div className="min-h-screen p-4 md:p-8">
+            <div className="max-w-2xl mx-auto">
+              {/* Header */}
+              <header className="mb-8 text-center relative">
+                <div className="absolute right-0 top-0">
+                  <ModeToggle />
+                </div>
+                <H1 className="text-white mb-2 drop-shadow-2xl">SecondSense</H1>
+                <P className="text-white/90 mt-0 drop-shadow-lg">Find the best deals on used gaming peripherals</P>
+              </header>
+
+              {/* Main content area */}
+              <div className="bg-card text-card-foreground rounded-lg shadow-lg p-6 md:p-8">
+                {state.currentStep === 'sliders' && state.selectedProduct && (
+                  <PreferencesPage
+                    selectedProduct={state.selectedProduct}
+                    preferences={state.preferences}
+                    isLoading={state.isLoading}
+                    onPreferencesChange={handlePreferencesChange}
+                    onSubmit={handleSubmitPreferences}
+                    onGoBack={handleGoBackToSearch}
+                  />
+                )}
+
+                {state.currentStep === 'results' && state.mockRecommendation && (
+                  <ResultsPage
+                    recommendation={state.mockRecommendation}
+                    onFindListings={handleFindListings}
+                    onNewSearch={handleNewSearch}
+                  />
+                )}
+
+                {state.currentStep === 'error' && (
+                  <ErrorPage
+                    error={state.error || 'An error occurred'}
+                    onRetry={handleRetry}
+                    suggestion="Try searching for one of the available products"
+                  />
+                )}
               </div>
-              <H1 className="text-foreground mb-2">SecondSense</H1>
-              <P className="text-muted-foreground mt-0">Find the best deals on used gaming peripherals</P>
-            </header>
 
-            {/* Main content area */}
-            <div className="bg-card text-card-foreground rounded-lg shadow-lg p-6 md:p-8">
-              {state.currentStep === 'sliders' && state.selectedProduct && (
-                <PreferencesPage
-                  selectedProduct={state.selectedProduct}
-                  preferences={state.preferences}
-                  isLoading={state.isLoading}
-                  onPreferencesChange={handlePreferencesChange}
-                  onSubmit={handleSubmitPreferences}
-                  onGoBack={handleGoBackToSearch}
+              {/* Disambiguation modal */}
+              {state.currentStep === 'disambiguation' && state.disambiguation && (
+                <ProductDisambiguation
+                  products={state.disambiguation}
+                  onSelect={handleSelectProduct}
+                  onCancel={handleCancelDisambiguation}
                 />
               )}
 
-              {state.currentStep === 'results' && state.mockRecommendation && (
-                <ResultsPage
-                  recommendation={state.mockRecommendation}
-                  onFindListings={handleFindListings}
-                  onNewSearch={handleNewSearch}
-                />
-              )}
-
-              {state.currentStep === 'error' && (
-                <ErrorPage
-                  error={state.error || 'An error occurred'}
-                  onRetry={handleRetry}
-                  suggestion="Try searching for one of the available products"
-                />
-              )}
+              {/* Loading overlay */}
+              {state.isLoading && <LoadingState message="Finding the best deals..." />}
             </div>
-
-            {/* Disambiguation modal */}
-            {state.currentStep === 'disambiguation' && state.disambiguation && (
-              <ProductDisambiguation
-                products={state.disambiguation}
-                onSelect={handleSelectProduct}
-                onCancel={handleCancelDisambiguation}
-              />
-            )}
-
-            {/* Loading overlay */}
-            {state.isLoading && <LoadingState message="Finding the best deals..." />}
           </div>
-        </div>
+        </BackgroundLayout>
       )}
     </ThemeProvider>
   );

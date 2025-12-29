@@ -1,16 +1,19 @@
+import { motion } from 'framer-motion';
 import type { RecommendationResponse, RankedOption } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { H3, Muted, Small, Display, PriceDisplay, StatDisplay } from '@/components/ui/typography';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { staggerContainerVariants, staggerItemVariants } from '@/animations/variants';
 
 /**
- * RecommendationDisplay - Shows ranked recommendations and market statistics
+ * RecommendationDisplay - Shows ranked recommendations with staggered animations
  *
  * Displays top 3 ranked options with prices, savings info, and justifications.
  * Shows market stats for all condition tiers and overall reasoning.
- * Provides "Find Listings" buttons for marketplace integration.
+ * Features cascading entrance animations for visual polish.
  *
  * @param data - Recommendation response with rankings and statistics
  * @param onFindListings - Callback when user clicks to find listings
@@ -23,44 +26,59 @@ export function RecommendationDisplay({
   data: RecommendationResponse;
   onFindListings: (condition: string) => void;
 }) {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
-    <div className="w-full space-y-8">
+    <motion.div
+      className="w-full space-y-8"
+      initial={prefersReducedMotion ? false : 'initial'}
+      animate="animate"
+      variants={staggerContainerVariants}
+    >
       {/* Product header */}
-      <div>
+      <motion.div variants={staggerItemVariants}>
         <Display>{data.product_name}</Display>
         <div className="flex items-center gap-3 mt-2">
           <Badge variant={getConfidenceVariant(data.confidence_score)}>
             {data.confidence_score} Confidence
           </Badge>
         </div>
-      </div>
+      </motion.div>
 
       {/* Rankings */}
-      <div className="space-y-4">
+      <motion.div className="space-y-4" variants={staggerItemVariants}>
         <H3 className="border-0 scroll-m-0">Top Recommendations</H3>
-        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
-          {data.recommendations.map((rec) => (
-            <RankingCard
+        <div className="flex flex-col gap-6 max-w-2xl mx-auto">
+          {data.recommendations.map((rec, index) => (
+            <motion.div
               key={rec.rank}
-              recommendation={rec}
-              onFindListings={onFindListings}
-            />
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1, duration: 0.4 }}
+            >
+              <RankingCard
+                recommendation={rec}
+                onFindListings={onFindListings}
+              />
+            </motion.div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* Market stats */}
-      <div className="space-y-3">
+      <motion.div className="space-y-3" variants={staggerItemVariants}>
         <H3 className="border-0 scroll-m-0">Market Statistics</H3>
         <MarketStatsTable data={data} />
-      </div>
+      </motion.div>
 
       {/* Reasoning */}
-      <Alert>
-        <AlertTitle>Why This Recommendation?</AlertTitle>
-        <AlertDescription>{data.reasoning}</AlertDescription>
-      </Alert>
-    </div>
+      <motion.div variants={staggerItemVariants}>
+        <Alert>
+          <AlertTitle>Why This Recommendation?</AlertTitle>
+          <AlertDescription>{data.reasoning}</AlertDescription>
+        </Alert>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -131,7 +149,7 @@ function RankingCard({
         {/* CTA Button */}
         <Button
           onClick={() => onFindListings(recommendation.condition)}
-          className="w-full"
+          className="w-full transition-all duration-200 hover:scale-105 active:scale-95"
           aria-label={`Find ${recommendation.condition} listings`}
         >
           Find Listings

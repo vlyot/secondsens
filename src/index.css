@@ -118,6 +118,25 @@
   --sidebar-ring: oklch(0.553 0.013 58.071);
 }
 
+@layer utilities {
+  .starfield-background {
+    background-color: #000;
+    background-image:
+      radial-gradient(2px 2px at 20% 30%, white, transparent),
+      radial-gradient(2px 2px at 60% 70%, white, transparent),
+      radial-gradient(1px 1px at 50% 50%, white, transparent),
+      radial-gradient(1px 1px at 80% 10%, white, transparent),
+      radial-gradient(2px 2px at 90% 60%, white, transparent),
+      radial-gradient(1px 1px at 33% 80%, white, transparent),
+      radial-gradient(2px 2px at 15% 90%, white, transparent),
+      radial-gradient(1px 1px at 70% 20%, white, transparent),
+      radial-gradient(1px 1px at 40% 60%, white, transparent),
+      radial-gradient(2px 2px at 85% 85%, white, transparent);
+    background-size: 200% 200%;
+    background-position: 0% 0%;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -127,5 +146,17 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Respect user's motion preferences for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

@@ -1,13 +1,15 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 /**
- * SearchBar - Product search input component
+ * SearchBar - Product search input component with micro-interactions
  *
- * Uses shadcn/ui Button and Input components for consistency.
+ * Uses shadcn/ui Button and Input components with Framer Motion animations.
  * Manages local query state and validates user input before submitting.
- * Disables input when API call is in progress (isLoading).
+ * Features focus animations and button press feedback.
  *
  * @param onSearch - Callback fired when user submits valid query
  * @param isLoading - Disables input/button when true
@@ -24,6 +26,7 @@ export function SearchBar({
   placeholder?: string;
 }) {
   const [query, setQuery] = useState('');
+  const prefersReducedMotion = useReducedMotion();
 
   const validateQuery = (q: string): boolean => {
     const trimmed = q.trim();
@@ -51,15 +54,21 @@ export function SearchBar({
           placeholder={placeholder}
           disabled={isLoading}
           aria-label="Product search"
-          className="flex-1"
+          className="flex-1 transition-all duration-200 focus-visible:scale-[1.01]"
         />
-        <Button
-          type="submit"
-          disabled={isLoading || !validateQuery(query)}
-          aria-label="Get recommendation"
+        <motion.div
+          whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
+          transition={{ duration: 0.1 }}
         >
-          {isLoading ? 'Searching...' : 'Search'}
-        </Button>
+          <Button
+            type="submit"
+            disabled={isLoading || !validateQuery(query)}
+            aria-label="Get recommendation"
+            className="transition-all duration-200"
+          >
+            {isLoading ? 'Searching...' : 'Search'}
+          </Button>
+        </motion.div>
       </div>
     </form>
   );
