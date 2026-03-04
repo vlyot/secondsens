@@ -13,6 +13,14 @@ dist-ssr
 *.local
 plan.md
 claude.md
+
+# Environment variables
+.env
+backend/.env
+
+# Build artifacts
+backend/bin/
+nul
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

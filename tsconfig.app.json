@@ -10,7 +10,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": [
-        "./src/*"
+        "./frontend/*"
       ],
     },
     /* Bundler mode */
@@ -29,6 +29,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "src/components/ui/GradientBlinds.tsx"],
+  "include": ["frontend", "frontend/components/ui/GradientBlinds.tsx"],
   
 }

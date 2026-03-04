@@ -6,14 +6,30 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"secondsense/backend/src/shared"
 	"secondsense/backend/src/shared/domain"
 )
 
+// setupTestHandler creates a router using a stub handler that exercises
+// parseRequest and validatePreferences (the parts that don't need LLM).
 func setupTestHandler() *gin.Engine {
 	router := gin.Default()
-	router.POST("/api/recommend", HandleRecommendation)
+	// Use a simple stub that mirrors what the real handler does for validation.
+	router.POST("/api/recommend", func(c *gin.Context) {
+		req, err := parseRequest(c)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Invalid request"})
+			return
+		}
+		if err := validatePreferences(&req.Preferences); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"message": "ok"})
+	})
 	return router
 }
 
@@ -87,29 +103,24 @@ func TestValidatePreferencesInRange(t *testing.T) {
 
 func TestValidatePreferencesOutOfRange(t *testing.T) {
 	testCases := []struct {
-		name string
+		name  string
 		prefs *domain.Preferences
-		field string
 	}{
 		{
 			name:  "BudgetFlexibility too low",
 			prefs: &domain.Preferences{BudgetFlexibility: -1, ConditionStandards: 5, HassleTolerances: 5},
-			field: "BudgetFlexibility",
 		},
 		{
 			name:  "BudgetFlexibility too high",
 			prefs: &domain.Preferences{BudgetFlexibility: 11, ConditionStandards: 5, HassleTolerances: 5},
-			field: "BudgetFlexibility",
 		},
 		{
 			name:  "ConditionStandards too low",
 			prefs: &domain.Preferences{BudgetFlexibility: 5, ConditionStandards: -1, HassleTolerances: 5},
-			field: "ConditionStandards",
 		},
 		{
 			name:  "HassleTolerances too high",
 			prefs: &domain.Preferences{BudgetFlexibility: 5, ConditionStandards: 5, HassleTolerances: 11},
-			field: "HassleTolerances",
 		},
 	}
 
@@ -120,5 +131,38 @@ func TestValidatePreferencesOutOfRange(t *testing.T) {
 				t.Error("Out of range preferences should error")
 			}
 		})
+	}
+}
+
+func TestBuildCacheKey_Deterministic(t *testing.T) {
+	prefs := &domain.Preferences{BudgetFlexibility: 7, ConditionStandards: 5, HassleTolerances: 4}
+	k1 := buildCacheKey("Logitech G Pro X Superlight", prefs)
+	k2 := buildCacheKey("Logitech G Pro X Superlight", prefs)
+	if k1 != k2 {
+		t.Errorf("cache key is not deterministic: %q vs %q", k1, k2)
+	}
+}
+
+func TestBuildCacheKey_DifferentPrefs(t *testing.T) {
+	p1 := &domain.Preferences{BudgetFlexibility: 7, ConditionStandards: 5, HassleTolerances: 4}
+	p2 := &domain.Preferences{BudgetFlexibility: 3, ConditionStandards: 9, HassleTolerances: 1}
+	k1 := buildCacheKey("Product", p1)
+	k2 := buildCacheKey("Product", p2)
+	if k1 == k2 {
+		t.Error("different preferences should produce different cache keys")
+	}
+}
+
+func TestBuildCacheKey_CacheHit(t *testing.T) {
+	cache := shared.NewCache(10, time.Minute)
+	prefs := &domain.Preferences{BudgetFlexibility: 5, ConditionStandards: 5, HassleTolerances: 5}
+	key := buildCacheKey("Test Product", prefs)
+	cache.Set(key, "stored")
+	val, ok := cache.Get(key)
+	if !ok {
+		t.Fatal("expected cache hit")
+	}
+	if val.(string) != "stored" {
+		t.Errorf("got %v, want stored", val)
 	}
 }

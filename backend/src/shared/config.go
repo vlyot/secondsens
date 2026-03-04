@@ -7,11 +7,11 @@ import (
 )
 
 // Config holds all application configuration.
+// Future good-to-have: support ANTHROPIC_API_KEY and OPENAI_API_KEY to let users bring their own provider.
 type Config struct {
 	Port         string
-	LLMAPIKey    string
-	LLMModel     string
-	CacheTTL     int64
+	GeminiAPIKey string
+	GeminiModel  string
 }
 
 // LoadConfig loads configuration from environment variables and .env file.
@@ -19,10 +19,9 @@ func LoadConfig() *Config {
 	godotenv.Load()
 
 	return &Config{
-		Port:      getEnv("PORT", "8080"),
-		LLMAPIKey: getEnv("ANTHROPIC_API_KEY", ""),
-		LLMModel:  getEnv("LLM_MODEL", "claude-3-5-sonnet-20241022"),
-		CacheTTL:  86400, // 24 hours in seconds
+		Port:         getEnv("PORT", "8080"),
+		GeminiAPIKey: getEnv("GEMINI_API_KEY", ""),
+		GeminiModel:  getEnv("GEMINI_MODEL", "gemini-2.5-flash"),
 	}
 }
 

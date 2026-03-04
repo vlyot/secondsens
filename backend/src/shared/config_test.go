@@ -6,7 +6,6 @@ import (
 )
 
 func TestLoadConfigDefaults(t *testing.T) {
-	// Clear environment to test defaults
 	os.Clearenv()
 
 	cfg := LoadConfig()
@@ -14,38 +13,34 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.Port != "8080" {
 		t.Errorf("Port: got %s, want 8080", cfg.Port)
 	}
-	if cfg.LLMAPIKey != "" {
-		t.Errorf("LLMAPIKey: got %s, want empty string", cfg.LLMAPIKey)
+	if cfg.GeminiAPIKey != "" {
+		t.Errorf("GeminiAPIKey: got %s, want empty string", cfg.GeminiAPIKey)
 	}
-	if cfg.LLMModel != "claude-3-5-sonnet-20241022" {
-		t.Errorf("LLMModel: got %s, want claude-3-5-sonnet-20241022", cfg.LLMModel)
-	}
-	if cfg.CacheTTL != 86400 {
-		t.Errorf("CacheTTL: got %d, want 86400", cfg.CacheTTL)
+	if cfg.GeminiModel != "gemini-2.0-flash" {
+		t.Errorf("GeminiModel: got %s, want gemini-2.0-flash", cfg.GeminiModel)
 	}
 }
 
 func TestLoadConfigFromEnv(t *testing.T) {
 	os.Setenv("PORT", "9000")
-	os.Setenv("ANTHROPIC_API_KEY", "test-key-123")
-	os.Setenv("LLM_MODEL", "test-model")
+	os.Setenv("GEMINI_API_KEY", "test-key-123")
+	os.Setenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
 
 	cfg := LoadConfig()
 
 	if cfg.Port != "9000" {
 		t.Errorf("Port: got %s, want 9000", cfg.Port)
 	}
-	if cfg.LLMAPIKey != "test-key-123" {
-		t.Errorf("LLMAPIKey: got %s, want test-key-123", cfg.LLMAPIKey)
+	if cfg.GeminiAPIKey != "test-key-123" {
+		t.Errorf("GeminiAPIKey: got %s, want test-key-123", cfg.GeminiAPIKey)
 	}
-	if cfg.LLMModel != "test-model" {
-		t.Errorf("LLMModel: got %s, want test-model", cfg.LLMModel)
+	if cfg.GeminiModel != "gemini-2.0-flash-exp" {
+		t.Errorf("GeminiModel: got %s, want gemini-2.0-flash-exp", cfg.GeminiModel)
 	}
 
-	// Cleanup
 	os.Unsetenv("PORT")
-	os.Unsetenv("ANTHROPIC_API_KEY")
-	os.Unsetenv("LLM_MODEL")
+	os.Unsetenv("GEMINI_API_KEY")
+	os.Unsetenv("GEMINI_MODEL")
 }
 
 func TestGetEnvFallback(t *testing.T) {

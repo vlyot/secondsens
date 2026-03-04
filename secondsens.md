@@ -44,7 +44,7 @@ A simple tool that aggregates prices across conditions, understands personal pre
 ### Step 1: Item Search
 
 **User Input:**
-- Free-text search box: "gaming mouse", "logitech g pro x superlight", "razer deathadder v3"
+- Free-text search box: "gaming mouse", "iPhone 13", "Sony WH-1000XM5", "Herman Miller chair"
 
 **System Behaviour:**
 - If query is specific enough (matches known product) → Proceed to Step 2
@@ -54,18 +54,19 @@ A simple tool that aggregates prices across conditions, understands personal pre
 ```
 We found several options. Which one?
 
-🖱️ Logitech G Pro X Superlight [Most Popular]
-🖱️ Logitech G Pro Wireless
-🖱️ Logitech G502 X
+📱 Apple iPhone 13 [Most Popular]
+📱 Apple iPhone 13 Pro
+📱 Apple iPhone 13 Mini
 ⋮
 [Show more] or [Be more specific]
 ```
 
 **Implementation Notes:**
-- Start with a curated catalogue of ~50 popular gaming peripherals
+- Start with a curated catalogue of ~50 popular products across categories
 - Expand catalogue based on actual user searches (personal use will guide this)
 - Use fuzzy matching for common typos/abbreviations
 - Model numbers should map to canonical product names
+- Categories: Electronics, Appliances, Furniture, Sporting Goods, Musical Instruments, Cameras, etc.
 
 ---
 

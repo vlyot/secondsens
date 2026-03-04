@@ -6,7 +6,7 @@ Project-wide guidance for Claude Code when working in this repository.
 
 **MANDATORY**: Before making changes, ALWAYS read the relevant CLAUDE.md file first:
 
-- **[src/CLAUDE.md](src/CLAUDE.md)** - Frontend development (React, TypeScript, Tailwind, shadcn/ui)
+- **[frontend/CLAUDE.md](frontend/CLAUDE.md)** - Frontend development (React, TypeScript, Tailwind, shadcn/ui)
 - **[backend/CLAUDE.md](backend/CLAUDE.md)** - Backend development (API, database, services)
 - **[docs/](docs/)** - Detailed references and examples:
   - [typography.md](docs/typography.md) - Complete typography system reference
@@ -49,14 +49,14 @@ npm run preview  # Preview production build locally
 ## Architecture
 
 ### Path Aliases
-- `@/*` → `./src/*`
+- `@/*` → `./frontend/*`
 - `@/components` - UI components directory
 - `@/lib/utils` - Utility functions (includes `cn()` helper)
 - `@/ui` - UI component subdirectory
 - `@/hooks` - React hooks directory
 
 ### Key Utilities
-- **`cn()` in `src/lib/utils.ts`** - Merges Tailwind classes using `clsx` and `tailwind-merge` for proper class deduplication
+- **`cn()` in `frontend/lib/utils.ts`** - Merges Tailwind classes using `clsx` and `tailwind-merge` for proper class deduplication
 
 ### TypeScript Configuration
 - `tsconfig.json` - Root configuration with path aliases
@@ -82,7 +82,7 @@ The Tailwind plugin is integrated via Vite (`@tailwindcss/vite`), so no separate
 
 ### Font System
 
-Modern system font stack configured in `src/index.css`:
+Modern system font stack configured in `frontend/index.css`:
 
 ```css
 --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI',
@@ -119,7 +119,7 @@ See [docs/component-examples.md](docs/component-examples.md) for:
 
 ## Getting Started
 
-1. Read [src/CLAUDE.md](src/CLAUDE.md) for frontend development guidelines
+1. Read [frontend/CLAUDE.md](frontend/CLAUDE.md) for frontend development guidelines
 2. Review [docs/typography.md](docs/typography.md) for typography system
 3. Review [docs/shadcn-workflow.md](docs/shadcn-workflow.md) for component workflow
 4. Check `plan.md` for current implementation tasks
