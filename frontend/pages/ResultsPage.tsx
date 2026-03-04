@@ -7,7 +7,7 @@ import type { RecommendationResponse } from '@/lib/types';
 
 interface ResultsPageProps {
   recommendation: RecommendationResponse;
-  onFindListings: (condition: string) => void;
+  onFindListings: (condition: string, productName: string) => void;
   onNewSearch: () => void;
 }
 
@@ -30,7 +30,7 @@ export function ResultsPage({ recommendation, onFindListings, onNewSearch }: Res
       <motion.div variants={staggerItemVariants}>
         <RecommendationDisplay
           data={recommendation}
-          onFindListings={onFindListings}
+          onFindListings={(condition) => onFindListings(condition, recommendation.product_name)}
         />
       </motion.div>
 

@@ -61,3 +61,12 @@ export interface Product {
   category: string;
   aliases: string[];
 }
+
+/** Returned by POST /api/recommend when the query is ambiguous */
+export interface AmbiguousResponse {
+  status: 'AMBIGUOUS';
+  matches: Product[];
+}
+
+/** Union of all possible successful API responses */
+export type RecommendationResult = RecommendationResponse | AmbiguousResponse;

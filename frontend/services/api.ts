@@ -1,16 +1,15 @@
 import { API_URL } from '@/lib/constants';
-import type { Preferences, RecommendationRequest, RecommendationResponse } from '@/lib/types';
+import type { Preferences, RecommendationRequest, RecommendationResult } from '@/lib/types';
 
 /**
  * Get recommendation from backend API.
- * @param item - Product name/query
- * @param preferences - User preferences (budget, condition, hassle tolerance)
- * @returns Recommendation response with rankings and reasoning
+ * Returns either a full RecommendationResponse or an AmbiguousResponse
+ * when the query matches multiple products.
  */
 export async function getRecommendation(
   item: string,
   preferences: Preferences
-): Promise<RecommendationResponse> {
+): Promise<RecommendationResult> {
   const request: RecommendationRequest = { item, preferences };
 
   const response = await fetch(`${API_URL}/api/recommend`, {
@@ -20,7 +19,7 @@ export async function getRecommendation(
   });
 
   if (!response.ok) {
-    throw handleAPIError(response);
+    throw await handleAPIError(response);
   }
 
   return response.json();
@@ -28,23 +27,26 @@ export async function getRecommendation(
 
 /**
  * Check backend health status.
- * @returns Health status object
  */
 export async function healthCheck(): Promise<{ status: string }> {
   const response = await fetch(`${API_URL}/health`);
 
   if (!response.ok) {
-    throw handleAPIError(response);
+    throw await handleAPIError(response);
   }
 
   return response.json();
 }
 
 /**
- * Convert HTTP response error to Error object.
- * @param response - HTTP response
- * @returns Error with status code
+ * Convert HTTP response error to Error object, reading error message from body if available.
  */
-export function handleAPIError(response: Response): Error {
-  return new Error(`HTTP ${response.status}: ${response.statusText}`);
+export async function handleAPIError(response: Response): Promise<Error> {
+  try {
+    const body = await response.json();
+    const message = body?.error ?? `HTTP ${response.status}: ${response.statusText}`;
+    return new Error(message);
+  } catch {
+    return new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
 }

@@ -16,8 +16,8 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.GeminiAPIKey != "" {
 		t.Errorf("GeminiAPIKey: got %s, want empty string", cfg.GeminiAPIKey)
 	}
-	if cfg.GeminiModel != "gemini-2.0-flash" {
-		t.Errorf("GeminiModel: got %s, want gemini-2.0-flash", cfg.GeminiModel)
+	if cfg.GeminiModel != "gemini-2.5-flash" {
+		t.Errorf("GeminiModel: got %s, want gemini-2.5-flash", cfg.GeminiModel)
 	}
 }
 

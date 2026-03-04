@@ -5,27 +5,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"regexp"
 	"sort"
 
 	"secondsense/backend/src/shared/domain"
 )
 
-// groundingClient is the subset of LLMClient used by PriceService.
-type groundingClient interface {
+type priceClient interface {
 	SearchWithGrounding(ctx context.Context, prompt string) (string, error)
+	GenerateJSON(ctx context.Context, prompt string) (string, error)
 }
 
-// PriceService fetches and validates live secondhand prices using Gemini grounded search.
 type PriceService struct {
-	llm groundingClient
+	llm priceClient
 }
 
-// NewPriceService creates a new PriceService.
-func NewPriceService(llm groundingClient) *PriceService {
+func NewPriceService(llm priceClient) *PriceService {
 	return &PriceService{llm: llm}
 }
 
-// rawPrices is the JSON structure returned by Gemini for price fetching.
 type rawPrices struct {
 	BrandNew []float64 `json:"brand_new"`
 	LikeNew  []float64 `json:"like_new"`
@@ -33,22 +31,43 @@ type rawPrices struct {
 	WellUsed []float64 `json:"well_used"`
 }
 
-// FetchPrices retrieves current Singapore secondhand prices for the given canonical product name.
-// Uses Gemini's Google Search grounding to find live listings on Carousell, Facebook Marketplace SG, and Lazada.
+var missingValue = regexp.MustCompile(`("[^"]+")\s*:(\s*[,}])`)
+
+func sanitisePriceJSON(s string) string {
+	return missingValue.ReplaceAllString(s, `$1:[]$2`)
+}
+
 func (ps *PriceService) FetchPrices(ctx context.Context, canonicalName string) (*domain.PriceData, error) {
-	prompt := fmt.Sprintf(
-		`Search for current Singapore secondhand prices for "%s".`+
-			` Find listings from Carousell, Facebook Marketplace Singapore, and Lazada.`+
-			` Return a JSON object ONLY (no markdown, no explanation) with this exact structure:`+
-			` {"brand_new":[price1,price2,...],"like_new":[price1,price2,...],"good":[price1,price2,...],"well_used":[price1,price2,...]}`+
-			` Rules: prices in SGD as numbers only, active listings only, include at least 3 prices per tier where available, exclude obvious outliers.`,
+	searchPrompt := fmt.Sprintf(
+		"Search for current Singapore secondhand prices for \"%s\". "+
+			"Find listings from Carousell SG, Facebook Marketplace SG, and Lazada SG. "+
+			"List specific asking prices in SGD for each condition: brand new, like new, good, well used. "+
+			"Give at least 3 price examples per tier.",
 		canonicalName,
 	)
 
-	raw, err := ps.llm.SearchWithGrounding(ctx, prompt)
+	searchResults, err := ps.llm.SearchWithGrounding(ctx, searchPrompt)
 	if err != nil {
 		return nil, fmt.Errorf("price search failed: %w", err)
 	}
+
+	extractPrompt := fmt.Sprintf(
+		"Extract all prices from the text below about \"%s\" secondhand in Singapore.\n"+
+			"TEXT:\n%s\n\n"+
+			"Classify each price into: brand_new, like_new, good, well_used.\n"+
+			"Output ONLY valid JSON. Every key MUST have an array value; use [] when no prices for that tier.\n"+
+			"No markdown, no prose, no trailing commas.\n"+
+			"Example: {\"brand_new\":[199.0],\"like_new\":[130.0,125.0],\"good\":[95.0],\"well_used\":[]}\n"+
+			"Output the JSON:",
+		canonicalName, searchResults,
+	)
+
+	raw, err := ps.llm.GenerateJSON(ctx, extractPrompt)
+	if err != nil {
+		return nil, fmt.Errorf("price extraction failed: %w", err)
+	}
+
+	raw = sanitisePriceJSON(raw)
 
 	var prices rawPrices
 	if err := json.Unmarshal([]byte(raw), &prices); err != nil {
@@ -69,7 +88,6 @@ func (ps *PriceService) FetchPrices(ctx context.Context, canonicalName string) (
 	return data, nil
 }
 
-// validateTier removes negative prices and outliers (>3× median), requires at least 1 price.
 func validateTier(prices []float64) []float64 {
 	var positive []float64
 	for _, p := range prices {
@@ -80,7 +98,6 @@ func validateTier(prices []float64) []float64 {
 	if len(positive) == 0 {
 		return nil
 	}
-
 	med := median(positive)
 	var filtered []float64
 	for _, p := range positive {
