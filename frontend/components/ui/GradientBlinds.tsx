@@ -69,12 +69,8 @@ const GradientBlinds: React.FC<GradientBlindsProps> = ({
   useEffect(() => {
     const container = containerRef.current
     if (!container) {
-      console.error("[GradientBlinds] No container ref!")
       return
     }
-
-    console.log("[GradientBlinds] Starting initialization...")
-    console.log("[GradientBlinds] Container dimensions:", container.getBoundingClientRect())
 
     let renderer: Renderer
     try {
@@ -83,9 +79,7 @@ const GradientBlinds: React.FC<GradientBlindsProps> = ({
         alpha: true,
         antialias: true,
       })
-      console.log("[GradientBlinds] Renderer created successfully")
-    } catch (err) {
-      console.error("[GradientBlinds] Failed to create renderer:", err)
+    } catch {
       return
     }
 
@@ -93,7 +87,6 @@ const GradientBlinds: React.FC<GradientBlindsProps> = ({
     const gl = renderer.gl
     const canvas = gl.canvas as HTMLCanvasElement
 
-    console.log("[GradientBlinds] Canvas created, setting styles...")
     canvas.style.width = "100%"
     canvas.style.height = "100%"
     canvas.style.display = "block"
@@ -102,9 +95,6 @@ const GradientBlinds: React.FC<GradientBlindsProps> = ({
     canvas.style.left = "0"
 
     container.appendChild(canvas)
-    console.log("[GradientBlinds] Canvas appended to container")
-    console.log("[GradientBlinds] Canvas dimensions:", canvas.width, "x", canvas.height)
-    console.log("[GradientBlinds] Canvas style dimensions:", canvas.style.width, "x", canvas.style.height)
 
     const vertex = `
 attribute vec2 position;
@@ -320,11 +310,9 @@ void main() {
     }
 
     resize()
-    console.log("[GradientBlinds] Initial resize complete, resolution:", uniforms.iResolution.value)
     const ro = new ResizeObserver(resize)
     ro.observe(container)
 
-    let frameCount = 0
     const loop = (t: number) => {
       rafRef.current = requestAnimationFrame(loop)
       uniforms.iTime.value = t * 0.001
@@ -334,19 +322,12 @@ void main() {
       if (!paused && programRef.current && meshRef.current) {
         try {
           renderer.render({ scene: meshRef.current })
-          if (frameCount === 0) {
-            console.log("[GradientBlinds] First frame rendered successfully!")
-          }
-          frameCount++
-        } catch (e) {
-          console.error("[GradientBlinds] Render error:", e)
+        } catch {
+          // silently ignore render errors
         }
-      } else if (frameCount === 0) {
-        console.log("[GradientBlinds] Skipping render - paused:", paused, "program:", !!programRef.current, "mesh:", !!meshRef.current)
       }
     }
     rafRef.current = requestAnimationFrame(loop)
-    console.log("[GradientBlinds] Animation loop started")
 
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)

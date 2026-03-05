@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:backend": "cd backend && ./backend",
+    "dev:backend": "cd backend && go run src/main.go",
     "start": "concurrently \"npm run dev:backend\" \"npm run dev\" --names \"backend,frontend\" --prefix-colors \"blue,green\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
