@@ -110,7 +110,7 @@ function RankingCard({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Prices */}
-        <div className="bg-accent rounded p-3">
+        <div className="bg-accent rounded p-3" aria-label={`${recommendation.condition} pricing`}>
           <div className="flex justify-between items-baseline mb-2">
             <Muted className="mt-0">Average Price:</Muted>
             <PriceDisplay>
@@ -170,7 +170,8 @@ function MarketStatsTable({ data }: { data: RecommendationResponse }) {
     <Card>
       <CardContent className="p-0">
         <div className="w-full overflow-hidden">
-          <table className="w-full">
+          <table className="w-full" aria-label="Market price statistics by condition">
+            <caption className="sr-only">Market price statistics by condition</caption>
             <thead>
               <tr className="bg-secondary border-b border-border">
                 <th className="px-4 py-3 text-left"><Small>Condition</Small></th>

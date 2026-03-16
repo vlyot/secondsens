@@ -22,15 +22,13 @@ export interface MarketplaceLinks {
  * @param condition - Condition tier label (e.g. "Like New", "Good")
  */
 export function getMarketplaceLinks(productName: string, condition: string): MarketplaceLinks {
-  const encodedProduct = encodeURIComponent(productName);
   const carousellCondition = CAROUSELL_CONDITION_MAP[condition] ?? '';
 
-  const carousellBase = `https://www.carousell.sg/search/${encodedProduct}/`;
-  const carousell = carousellCondition
-    ? `${carousellBase}?condition_v2=${carousellCondition}`
-    : carousellBase;
+  const carousellParams = new URLSearchParams({ query: productName });
+  if (carousellCondition) carousellParams.set('condition_v2', carousellCondition);
+  const carousell = `https://www.carousell.sg/search/?${carousellParams.toString()}`;
 
-  const facebook = `https://www.facebook.com/marketplace/singapore/search/?query=${encodedProduct}`;
+  const facebook = `https://www.facebook.com/marketplace/singapore/search/?${new URLSearchParams({ query: productName }).toString()}`;
 
   return { carousell, facebook };
 }

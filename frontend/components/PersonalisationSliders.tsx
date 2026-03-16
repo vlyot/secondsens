@@ -9,6 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Muted, Small } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -151,11 +152,20 @@ function SliderField({
         </Label>
         <div className="flex items-center gap-2">
           <Small className={cn("text-primary", !active && "text-muted-foreground")}>{value}/10</Small>
-          <Switch
-            checked={active}
-            onCheckedChange={onToggle}
-            aria-label={`Toggle ${label}`}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <Switch
+                  checked={active}
+                  onCheckedChange={onToggle}
+                  aria-label={`Toggle ${label}`}
+                />
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <p>Disable this preference</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
       <div className={cn(!active && "opacity-50 pointer-events-none")}>

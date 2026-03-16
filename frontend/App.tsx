@@ -113,6 +113,15 @@ function App() {
     }));
   };
 
+  const handleNoneSelected = () => {
+    setState((prev) => ({
+      ...prev,
+      currentStep: 'search',
+      disambiguation: null,
+      // preserve searchQuery so the input is pre-filled
+    }));
+  };
+
   const handleFindListings = (condition: string, productName: string) => {
     const { carousell, facebook } = getMarketplaceLinks(productName, condition);
     window.open(carousell, '_blank', 'noopener,noreferrer');
@@ -220,6 +229,7 @@ function App() {
                   products={state.disambiguation}
                   onSelect={handleSelectProduct}
                   onCancel={handleCancelDisambiguation}
+                  onNoneSelected={handleNoneSelected}
                 />
               )}
 

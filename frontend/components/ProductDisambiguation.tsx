@@ -21,10 +21,12 @@ export function ProductDisambiguation({
   products,
   onSelect,
   onCancel,
+  onNoneSelected,
 }: {
   products: Product[];
   onSelect: (product: Product) => void;
   onCancel: () => void;
+  onNoneSelected: () => void;
 }) {
   const prefersReducedMotion = useReducedMotion();
 
@@ -64,7 +66,14 @@ export function ProductDisambiguation({
         </div>
 
         {/* Footer */}
-        <DialogFooter>
+        <DialogFooter className="flex gap-2 sm:justify-between">
+          <Button
+            onClick={onNoneSelected}
+            variant="ghost"
+            aria-label="None of these products match my search"
+          >
+            None of these
+          </Button>
           <Button
             onClick={onCancel}
             variant="outline"

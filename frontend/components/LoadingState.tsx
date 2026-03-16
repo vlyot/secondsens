@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
 import { Large } from '@/components/ui/typography';
@@ -22,6 +23,15 @@ export function LoadingState({
   progress?: number;
 }) {
   const prefersReducedMotion = useReducedMotion();
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    cardRef.current?.focus();
+    return () => {
+      previousFocus?.focus();
+    };
+  }, []);
 
   return (
     <motion.div
@@ -30,9 +40,14 @@ export function LoadingState({
       animate="animate"
       exit="exit"
       variants={backdropVariants}
+      role="status"
+      aria-live="polite"
+      aria-label={message}
     >
       <motion.div
-        className="bg-card rounded-lg shadow-lg p-8 max-w-sm mx-4 text-center space-y-6 border border-border"
+        ref={cardRef}
+        tabIndex={-1}
+        className="bg-card rounded-lg shadow-lg p-8 max-w-sm mx-4 text-center space-y-6 border border-border outline-none"
         variants={scaleVariants}
       >
         {/* Spinner */}
