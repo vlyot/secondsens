@@ -5,9 +5,11 @@ Core flow complete (Phases 1–5 of original roadmap). This plan covers UI/UX po
 
 > Search history is deferred — it will be implemented as part of the upcoming User Profiles feature.
 
+> **Preference Overhaul (completed):** The 3-slider system was replaced with 6 orthogonal preferences — Budget Flexibility, Quality Priority, Risk Tolerance (sliders + toggles) and Use Frequency, Deal Urgency, Resale Priority (segmented pill selectors). Gemini prompt updated accordingly. Phase 1 emoji/icon work and Phase 6/6.5 toggle + context work were completed as part of this overhaul.
+
 ---
 
-## Phase 1 — Emoji Removal
+## Phase 1 — Emoji Removal ✅
 **Files:** `frontend/components/PersonalisationSliders.tsx`, `frontend/components/ErrorState.tsx`
 
 - Replace `getEmojiForBudget()`, `getEmojiForCondition()`, `getEmojiForHassle()` emoji returns with FontAwesome or Lucide icon components
@@ -51,7 +53,7 @@ Core flow complete (Phases 1–5 of original roadmap). This plan covers UI/UX po
 
 ---
 
-## Phase 6 — Custom Context Input
+## Phase 6 — Custom Context Input ✅
 **Files:** `frontend/pages/PreferencesPage.tsx` (or `frontend/components/PersonalisationSliders.tsx`), `frontend/App.tsx`, `frontend/services/api.ts`, `backend/src/...` (prompt injection)
 
 - Add a shadcn/ui `Textarea` below the sliders, max 150 characters
@@ -61,7 +63,7 @@ Core flow complete (Phases 1–5 of original roadmap). This plan covers UI/UX po
 - Backend `/api/recommend` must accept `context` and inject it into the LLM prompt
 - This could include specifcs. For example, a user might include which apple chip for a macbook (m5 pro for example)
 
-## Phase 6.5 - Mark Sliders As irrelevent
+## Phase 6.5 — Mark Sliders As Irrelevant ✅
 
 If a user wants to mark a slider : say hassle tolerance, as somnething they do not consider, they can toggle a switch so that the LLM knows that that slider does not need to be considered.
 ---

@@ -153,6 +153,10 @@ function App() {
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <div className="absolute right-4 top-4 z-50">
+        <ModeToggle />
+      </div>
+
       {state.currentStep === 'landing' && (
         <LandingPage onGetStarted={handleGetStarted} />
       )}
@@ -169,9 +173,6 @@ function App() {
           <div className="min-h-screen p-4 md:p-8">
             <div className="max-w-2xl mx-auto">
               <header className="mb-8 text-center relative">
-                <div className="absolute right-0 top-0">
-                  <ModeToggle />
-                </div>
                 <H1 className="text-white mb-2 drop-shadow-2xl">SecondSense</H1>
                 <P className="text-white/90 mt-0 drop-shadow-lg">Find the best deals on used gaming peripherals</P>
               </header>

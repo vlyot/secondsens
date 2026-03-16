@@ -6,11 +6,18 @@ type RecommendationRequest struct {
 	Preferences Preferences `json:"preferences"`
 }
 
-// Preferences captures user's three-slider inputs (0-10 scale).
+// Preferences captures the user's six-preference inputs.
 type Preferences struct {
-	BudgetFlexibility  int `json:"budget_flexibility"`   // 0=tight budget, 10=flexible
-	ConditionStandards int `json:"condition_standards"`   // 0=don't care, 10=pristine
-	HassleTolerances   int `json:"hassle_tolerance"`      // 0=willing to fix, 10=plug & play
+	BudgetFlexibility       int    `json:"budget_flexibility"`
+	BudgetFlexibilityActive bool   `json:"budget_flexibility_active,omitempty"`
+	QualityPriority         int    `json:"quality_priority"`
+	QualityPriorityActive   bool   `json:"quality_priority_active,omitempty"`
+	RiskTolerance           int    `json:"risk_tolerance"`
+	RiskToleranceActive     bool   `json:"risk_tolerance_active,omitempty"`
+	UseFrequency            string `json:"use_frequency"`
+	DealUrgency             string `json:"deal_urgency"`
+	ResalePriority          string `json:"resale_priority"`
+	Context                 string `json:"context,omitempty"`
 }
 
 // RecommendationResponse is the complete response with rankings and reasoning.

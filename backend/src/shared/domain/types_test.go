@@ -9,9 +9,12 @@ func TestRecommendationRequestJSON(t *testing.T) {
 	req := RecommendationRequest{
 		Item: "Logitech G Pro X Superlight",
 		Preferences: Preferences{
-			BudgetFlexibility:  7,
-			ConditionStandards: 6,
-			HassleTolerances:   8,
+			BudgetFlexibility: 7,
+			QualityPriority:   6,
+			RiskTolerance:     8,
+			UseFrequency:      "regular",
+			DealUrgency:       "soon",
+			ResalePriority:    "keeping",
 		},
 	}
 
@@ -38,9 +41,12 @@ func TestRecommendationRequestJSON(t *testing.T) {
 
 func TestPreferencesValidRange(t *testing.T) {
 	prefs := Preferences{
-		BudgetFlexibility:  0,
-		ConditionStandards: 5,
-		HassleTolerances:   10,
+		BudgetFlexibility: 0,
+		QualityPriority:   5,
+		RiskTolerance:     10,
+		UseFrequency:      "daily_driver",
+		DealUrgency:       "need_it_now",
+		ResalePriority:    "definitely_reselling",
 	}
 
 	// Test marshaling of boundary values
@@ -58,11 +64,20 @@ func TestPreferencesValidRange(t *testing.T) {
 	if unmarshaled.BudgetFlexibility != 0 {
 		t.Errorf("BudgetFlexibility: got %d, want 0", unmarshaled.BudgetFlexibility)
 	}
-	if unmarshaled.ConditionStandards != 5 {
-		t.Errorf("ConditionStandards: got %d, want 5", unmarshaled.ConditionStandards)
+	if unmarshaled.QualityPriority != 5 {
+		t.Errorf("QualityPriority: got %d, want 5", unmarshaled.QualityPriority)
 	}
-	if unmarshaled.HassleTolerances != 10 {
-		t.Errorf("HassleTolerances: got %d, want 10", unmarshaled.HassleTolerances)
+	if unmarshaled.RiskTolerance != 10 {
+		t.Errorf("RiskTolerance: got %d, want 10", unmarshaled.RiskTolerance)
+	}
+	if unmarshaled.UseFrequency != "daily_driver" {
+		t.Errorf("UseFrequency: got %s, want daily_driver", unmarshaled.UseFrequency)
+	}
+	if unmarshaled.DealUrgency != "need_it_now" {
+		t.Errorf("DealUrgency: got %s, want need_it_now", unmarshaled.DealUrgency)
+	}
+	if unmarshaled.ResalePriority != "definitely_reselling" {
+		t.Errorf("ResalePriority: got %s, want definitely_reselling", unmarshaled.ResalePriority)
 	}
 }
 

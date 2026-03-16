@@ -96,7 +96,7 @@ func resolveProduct(ctx context.Context, query string, svc *products.ProductServ
 // buildCacheKey creates a deterministic cache key from product name and preferences.
 func buildCacheKey(canonicalName string, prefs *domain.Preferences) string {
 	h := fnv.New32a()
-	h.Write([]byte(fmt.Sprintf("%d:%d:%d", prefs.BudgetFlexibility, prefs.ConditionStandards, prefs.HassleTolerances)))
+	h.Write([]byte(fmt.Sprintf("%d:%d:%d:%s:%s:%s", prefs.BudgetFlexibility, prefs.QualityPriority, prefs.RiskTolerance, prefs.UseFrequency, prefs.DealUrgency, prefs.ResalePriority)))
 	return fmt.Sprintf("recommendation:%s:%d", strings.ToLower(canonicalName), h.Sum32())
 }
 
@@ -114,11 +114,11 @@ func validatePreferences(prefs *domain.Preferences) error {
 	if prefs.BudgetFlexibility < 0 || prefs.BudgetFlexibility > 10 {
 		return &ValidationError{"BudgetFlexibility must be between 0 and 10"}
 	}
-	if prefs.ConditionStandards < 0 || prefs.ConditionStandards > 10 {
-		return &ValidationError{"ConditionStandards must be between 0 and 10"}
+	if prefs.QualityPriority < 0 || prefs.QualityPriority > 10 {
+		return &ValidationError{"QualityPriority must be between 0 and 10"}
 	}
-	if prefs.HassleTolerances < 0 || prefs.HassleTolerances > 10 {
-		return &ValidationError{"HassleTolerances must be between 0 and 10"}
+	if prefs.RiskTolerance < 0 || prefs.RiskTolerance > 10 {
+		return &ValidationError{"RiskTolerance must be between 0 and 10"}
 	}
 	return nil
 }

@@ -56,6 +56,46 @@ func (rs *RecommendationService) Generate(
 	good := computeStats(prices.Good)
 	wellUsed := computeStats(prices.WellUsed)
 
+	budgetLine := fmt.Sprintf("Budget Flexibility: %d/10  (0=very tight budget, 10=very flexible)", prefs.BudgetFlexibility)
+	if !prefs.BudgetFlexibilityActive {
+		budgetLine = "Budget Flexibility: user does not consider this factor — ignore it in your ranking"
+	}
+
+	qualityLine := fmt.Sprintf("Quality Priority: %d/10  (0=any condition acceptable, 10=pristine only)", prefs.QualityPriority)
+	if !prefs.QualityPriorityActive {
+		qualityLine = "Quality Priority: user does not consider this factor — ignore it in your ranking"
+	}
+
+	riskLine := fmt.Sprintf("Risk Tolerance: %d/10  (0=comfortable with uncertainty, 10=needs guaranteed quality)", prefs.RiskTolerance)
+	if !prefs.RiskToleranceActive {
+		riskLine = "Risk Tolerance: user does not consider this factor — ignore it in your ranking"
+	}
+
+	useFreqMap := map[string]string{
+		"occasional":   "occasional use",
+		"regular":      "regular use",
+		"daily_driver": "daily driver (heavy, frequent use)",
+	}
+	urgencyMap := map[string]string{
+		"no_rush":      "no rush — happy to wait for a better deal",
+		"soon":         "looking to buy soon",
+		"need_it_now":  "needs it urgently — timing is critical",
+	}
+	resaleMap := map[string]string{
+		"keeping":              "planning to keep long-term",
+		"maybe":               "might resell eventually",
+		"definitely_reselling": "definitely reselling — high resale value matters",
+	}
+
+	useFreqLine := fmt.Sprintf("Use Frequency: %s", useFreqMap[prefs.UseFrequency])
+	urgencyLine := fmt.Sprintf("Deal Urgency: %s", urgencyMap[prefs.DealUrgency])
+	resaleLine := fmt.Sprintf("Resale Priority: %s", resaleMap[prefs.ResalePriority])
+
+	contextLine := ""
+	if prefs.Context != "" {
+		contextLine = "\nAdditional user context: " + prefs.Context
+	}
+
 	prompt := fmt.Sprintf(
 		`Product: %s
 Market prices (SGD):
@@ -64,12 +104,21 @@ Market prices (SGD):
   Good:      avg S$%.2f, range S$%.2f–%.2f
   Well Used: avg S$%.2f, range S$%.2f–%.2f
 
-User preferences (0–10 scale):
-  Budget Flexibility: %d   (0=very tight, 10=very flexible)
-  Condition Standards: %d  (0=don't care about condition, 10=pristine only)
-  Hassle Tolerance: %d     (0=willing to repair/fix, 10=plug & play only)
+User preferences:
+  %s
+  %s
+  %s
+  %s
+  %s
+  %s%s
 
-Rank the top 3 condition tiers for this user based on their preferences and the price data.
+Rank the top 3 condition tiers for this user. Factor in all six preferences together:
+- Budget Flexibility and Quality Priority guide which price/condition tradeoff suits them
+- Risk Tolerance indicates how much uncertainty they can accept in a used purchase
+- Use Frequency affects how much reliability and durability matter
+- Deal Urgency affects whether current market pricing is acceptable or they should aim differently
+- Resale Priority affects whether condition retention and brand value matter
+
 Return JSON ONLY (no markdown):
 {
   "rankings": [
@@ -86,7 +135,7 @@ Valid condition values: "brand_new", "like_new", "good", "well_used". confidence
 		likeNew.avg, likeNew.min, likeNew.max,
 		good.avg, good.min, good.max,
 		wellUsed.avg, wellUsed.min, wellUsed.max,
-		prefs.BudgetFlexibility, prefs.ConditionStandards, prefs.HassleTolerances,
+		budgetLine, qualityLine, riskLine, useFreqLine, urgencyLine, resaleLine, contextLine,
 	)
 
 	raw, err := rs.llm.GenerateJSON(ctx, prompt)

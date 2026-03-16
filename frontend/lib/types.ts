@@ -9,9 +9,16 @@ export interface RecommendationRequest {
 }
 
 export interface Preferences {
-  budget_flexibility: number;   // 0-10: tight budget to flexible
-  condition_standards: number;   // 0-10: don't care to pristine
-  hassle_tolerance: number;      // 0-10: willing to fix to plug & play
+  budget_flexibility: number;          // 0-10: tight budget to flexible
+  budget_flexibility_active?: boolean;
+  quality_priority: number;            // 0-10: any condition fine to pristine only
+  quality_priority_active?: boolean;
+  risk_tolerance: number;              // 0-10: comfortable with uncertainty to needs guarantees
+  risk_tolerance_active?: boolean;
+  use_frequency: 'occasional' | 'regular' | 'daily_driver';
+  deal_urgency: 'no_rush' | 'soon' | 'need_it_now';
+  resale_priority: 'keeping' | 'maybe' | 'definitely_reselling';
+  context?: string;
 }
 
 export interface RecommendationResponse {

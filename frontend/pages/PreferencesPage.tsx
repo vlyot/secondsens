@@ -54,7 +54,7 @@ export function PreferencesPage({
         />
       </motion.div>
 
-      <motion.div className="flex gap-3" variants={staggerItemVariants}>
+      <motion.div className="flex flex-col sm:flex-row gap-3" variants={staggerItemVariants}>
         <Button
           variant="outline"
           onClick={onGoBack}

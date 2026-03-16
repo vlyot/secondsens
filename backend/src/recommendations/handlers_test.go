@@ -17,7 +17,6 @@ import (
 // parseRequest and validatePreferences (the parts that don't need LLM).
 func setupTestHandler() *gin.Engine {
 	router := gin.Default()
-	// Use a simple stub that mirrors what the real handler does for validation.
 	router.POST("/api/recommend", func(c *gin.Context) {
 		req, err := parseRequest(c)
 		if err != nil {
@@ -33,15 +32,22 @@ func setupTestHandler() *gin.Engine {
 	return router
 }
 
+func validPrefs() domain.Preferences {
+	return domain.Preferences{
+		BudgetFlexibility: 5,
+		QualityPriority:   5,
+		RiskTolerance:     5,
+		UseFrequency:      "regular",
+		DealUrgency:       "soon",
+		ResalePriority:    "maybe",
+	}
+}
+
 func TestHandleRecommendationValidRequest(t *testing.T) {
 	router := setupTestHandler()
 	req := domain.RecommendationRequest{
-		Item: "test product",
-		Preferences: domain.Preferences{
-			BudgetFlexibility:  5,
-			ConditionStandards: 5,
-			HassleTolerances:   5,
-		},
+		Item:        "test product",
+		Preferences: validPrefs(),
 	}
 	body, _ := json.Marshal(req)
 	httpReq, _ := http.NewRequest("POST", "/api/recommend", bytes.NewReader(body))
@@ -69,12 +75,8 @@ func TestHandleRecommendationInvalidJSON(t *testing.T) {
 func TestParseRequestSuccess(t *testing.T) {
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
 	req := domain.RecommendationRequest{
-		Item: "test",
-		Preferences: domain.Preferences{
-			BudgetFlexibility:  5,
-			ConditionStandards: 5,
-			HassleTolerances:   5,
-		},
+		Item:        "test",
+		Preferences: validPrefs(),
 	}
 	body, _ := json.Marshal(req)
 	c.Request, _ = http.NewRequest("POST", "/", bytes.NewReader(body))
@@ -91,9 +93,12 @@ func TestParseRequestSuccess(t *testing.T) {
 
 func TestValidatePreferencesInRange(t *testing.T) {
 	prefs := &domain.Preferences{
-		BudgetFlexibility:  0,
-		ConditionStandards: 5,
-		HassleTolerances:   10,
+		BudgetFlexibility: 0,
+		QualityPriority:   5,
+		RiskTolerance:     10,
+		UseFrequency:      "occasional",
+		DealUrgency:       "no_rush",
+		ResalePriority:    "keeping",
 	}
 	err := validatePreferences(prefs)
 	if err != nil {
@@ -102,25 +107,26 @@ func TestValidatePreferencesInRange(t *testing.T) {
 }
 
 func TestValidatePreferencesOutOfRange(t *testing.T) {
+	base := validPrefs()
 	testCases := []struct {
 		name  string
 		prefs *domain.Preferences
 	}{
 		{
 			name:  "BudgetFlexibility too low",
-			prefs: &domain.Preferences{BudgetFlexibility: -1, ConditionStandards: 5, HassleTolerances: 5},
+			prefs: func() *domain.Preferences { p := base; p.BudgetFlexibility = -1; return &p }(),
 		},
 		{
 			name:  "BudgetFlexibility too high",
-			prefs: &domain.Preferences{BudgetFlexibility: 11, ConditionStandards: 5, HassleTolerances: 5},
+			prefs: func() *domain.Preferences { p := base; p.BudgetFlexibility = 11; return &p }(),
 		},
 		{
-			name:  "ConditionStandards too low",
-			prefs: &domain.Preferences{BudgetFlexibility: 5, ConditionStandards: -1, HassleTolerances: 5},
+			name:  "QualityPriority too low",
+			prefs: func() *domain.Preferences { p := base; p.QualityPriority = -1; return &p }(),
 		},
 		{
-			name:  "HassleTolerances too high",
-			prefs: &domain.Preferences{BudgetFlexibility: 5, ConditionStandards: 5, HassleTolerances: 11},
+			name:  "RiskTolerance too high",
+			prefs: func() *domain.Preferences { p := base; p.RiskTolerance = 11; return &p }(),
 		},
 	}
 
@@ -135,7 +141,14 @@ func TestValidatePreferencesOutOfRange(t *testing.T) {
 }
 
 func TestBuildCacheKey_Deterministic(t *testing.T) {
-	prefs := &domain.Preferences{BudgetFlexibility: 7, ConditionStandards: 5, HassleTolerances: 4}
+	prefs := &domain.Preferences{
+		BudgetFlexibility: 7,
+		QualityPriority:   5,
+		RiskTolerance:     4,
+		UseFrequency:      "regular",
+		DealUrgency:       "soon",
+		ResalePriority:    "maybe",
+	}
 	k1 := buildCacheKey("Logitech G Pro X Superlight", prefs)
 	k2 := buildCacheKey("Logitech G Pro X Superlight", prefs)
 	if k1 != k2 {
@@ -144,8 +157,8 @@ func TestBuildCacheKey_Deterministic(t *testing.T) {
 }
 
 func TestBuildCacheKey_DifferentPrefs(t *testing.T) {
-	p1 := &domain.Preferences{BudgetFlexibility: 7, ConditionStandards: 5, HassleTolerances: 4}
-	p2 := &domain.Preferences{BudgetFlexibility: 3, ConditionStandards: 9, HassleTolerances: 1}
+	p1 := &domain.Preferences{BudgetFlexibility: 7, QualityPriority: 5, RiskTolerance: 4, UseFrequency: "regular", DealUrgency: "soon", ResalePriority: "maybe"}
+	p2 := &domain.Preferences{BudgetFlexibility: 3, QualityPriority: 9, RiskTolerance: 1, UseFrequency: "daily_driver", DealUrgency: "need_it_now", ResalePriority: "definitely_reselling"}
 	k1 := buildCacheKey("Product", p1)
 	k2 := buildCacheKey("Product", p2)
 	if k1 == k2 {
@@ -155,7 +168,14 @@ func TestBuildCacheKey_DifferentPrefs(t *testing.T) {
 
 func TestBuildCacheKey_CacheHit(t *testing.T) {
 	cache := shared.NewCache(10, time.Minute)
-	prefs := &domain.Preferences{BudgetFlexibility: 5, ConditionStandards: 5, HassleTolerances: 5}
+	prefs := &domain.Preferences{
+		BudgetFlexibility: 5,
+		QualityPriority:   5,
+		RiskTolerance:     5,
+		UseFrequency:      "regular",
+		DealUrgency:       "soon",
+		ResalePriority:    "maybe",
+	}
 	key := buildCacheKey("Test Product", prefs)
 	cache.Set(key, "stored")
 	val, ok := cache.Get(key)
