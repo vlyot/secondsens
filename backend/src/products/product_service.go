@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/sahilm/fuzzy"
 	"secondsense/backend/src/shared"
@@ -14,6 +15,7 @@ import (
 // llmClient is the interface ProductService uses — allows mocking in tests.
 type llmClient interface {
 	GenerateJSON(ctx context.Context, prompt string) (string, error)
+	SearchWithGrounding(ctx context.Context, prompt string) (string, error)
 }
 
 // ProductService handles product matching logic.
@@ -72,19 +74,20 @@ func (ps *ProductService) ValidateDynamicProduct(ctx context.Context, query stri
 	}
 
 	prompt := fmt.Sprintf(
-		"Is %q a real consumer product with an active secondhand market?"+
-			" Return JSON: {\"is_valid\": true, \"canonical_name\": \"...\", \"reason\": \"...\"}"+
-			" Only mark is_valid true if you are confident it is a real, purchasable product.",
+		"Search the web and determine: is %q a real consumer product available for purchase today with an active secondhand market?"+
+			" Respond with ONLY a JSON object, no other text: {\"is_valid\": true, \"canonical_name\": \"exact product name\", \"reason\": \"brief reason\"}"+
+			" Set is_valid to true if the product exists and can be bought secondhand.",
 		query,
 	)
 
-	raw, err := ps.llm.GenerateJSON(ctx, prompt)
+	raw, err := ps.llm.SearchWithGrounding(ctx, prompt)
 	if err != nil {
 		return "", false, fmt.Errorf("product validation failed: %w", err)
 	}
 
+	jsonStr := extractJSON(raw)
 	var result validationResult
-	if err := json.Unmarshal([]byte(raw), &result); err != nil {
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
 		return "", false, fmt.Errorf("failed to parse validation response: %w", err)
 	}
 
@@ -184,4 +187,14 @@ func (ps *ProductService) SearchLegacy(query string) (*domain.Product, error) {
 		return &result.Matches[0], nil
 	}
 	return nil, fmt.Errorf("product not found: %s", query)
+}
+
+// extractJSON finds the first {...} block in s, stripping any surrounding prose or markdown fences.
+func extractJSON(s string) string {
+	start := strings.Index(s, "{")
+	end := strings.LastIndex(s, "}")
+	if start == -1 || end == -1 || end < start {
+		return s
+	}
+	return s[start : end+1]
 }

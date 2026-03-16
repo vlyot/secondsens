@@ -10,6 +10,7 @@ import BackgroundLayout from '@/components/layout/BackgroundLayout';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ModeToggle } from '@/components/mode-toggle';
 import { H1, P } from '@/components/ui/typography';
+import { FlowBreadcrumbs } from '@/components/FlowBreadcrumbs';
 import { DEFAULT_PREFERENCES } from '@/lib/constants';
 import { getMarketplaceLinks } from '@/lib/marketplaceLinks';
 import { getRecommendation } from '@/services/api';
@@ -146,6 +147,10 @@ function App() {
     }));
   };
 
+  const handleGoBackToPreferences = () => {
+    setState((prev) => ({ ...prev, currentStep: 'sliders' }));
+  };
+
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       {state.currentStep === 'landing' && (
@@ -172,6 +177,15 @@ function App() {
               </header>
 
               <div className="bg-card text-card-foreground rounded-lg shadow-lg p-6 md:p-8">
+                <FlowBreadcrumbs
+                  currentStep={
+                    state.currentStep === 'sliders' ? 'preferences'
+                    : state.currentStep === 'results' ? 'results'
+                    : 'search'
+                  }
+                  onGoToSearch={handleGoBackToSearch}
+                  onGoToPreferences={handleGoBackToPreferences}
+                />
                 {state.currentStep === 'sliders' && (
                   <PreferencesPage
                     selectedProduct={state.selectedProduct ?? { id: '', canonical_name: state.searchQuery, category: '', aliases: [] }}
@@ -209,7 +223,7 @@ function App() {
               )}
 
               {state.isLoading && (
-                <LoadingState message="Fetching real-time prices... this takes ~30-45 seconds" />
+                <LoadingState message="Fetching real-time prices, this may take a moment…" />
               )}
             </div>
           </div>

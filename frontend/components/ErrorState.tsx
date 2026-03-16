@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Lightbulb } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Muted } from '@/components/ui/typography';
@@ -45,8 +46,9 @@ export function ErrorState({
       {/* Suggestion */}
       {suggestion && (
         <motion.div variants={staggerItemVariants}>
-          <Muted className="bg-secondary/50 rounded px-3 py-2 mt-0">
-            💡 {suggestion}
+          <Muted className="bg-secondary/50 rounded px-3 py-2 mt-0 flex items-center gap-1.5">
+            <Lightbulb className="h-4 w-4 shrink-0" aria-hidden={true} />
+            {suggestion}
           </Muted>
         </motion.div>
       )}

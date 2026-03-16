@@ -1,19 +1,14 @@
+import type { LucideIcon } from 'lucide-react';
+import {
+  Banknote, Wallet, BadgeDollarSign,
+  Wrench, Star, Gem,
+  ToolCase, Zap, CircleCheckBig,
+} from 'lucide-react';
 import type { Preferences } from '@/lib/types';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { Muted, Small, Emoji } from '@/components/ui/typography';
+import { Muted, Small } from '@/components/ui/typography';
 
-/**
- * PersonalisationSliders - Three interactive sliders for user preferences
- *
- * Manages budget flexibility, condition standards, and hassle tolerance on 0-10 scale.
- * Each slider is independent and updates parent state via callback.
- * Provides emoji feedback that changes based on slider position.
- *
- * @param preferences - Current preference values from parent
- * @param onPreferencesChange - Callback to update parent state
- * @returns Rendered sliders component
- */
 export function PersonalisationSliders({
   preferences,
   onPreferencesChange,
@@ -21,22 +16,22 @@ export function PersonalisationSliders({
   preferences: Preferences;
   onPreferencesChange: (prefs: Preferences) => void;
 }) {
-  const getEmojiForBudget = (value: number): string => {
-    if (value < 4) return '💸';
-    if (value < 7) return '💰';
-    return '🤑';
+  const getIconForBudget = (value: number): LucideIcon => {
+    if (value < 4) return Banknote;
+    if (value < 7) return Wallet;
+    return BadgeDollarSign;
   };
 
-  const getEmojiForCondition = (value: number): string => {
-    if (value < 4) return '🔧';
-    if (value < 7) return '⭐';
-    return '✨';
+  const getIconForCondition = (value: number): LucideIcon => {
+    if (value < 4) return Wrench;
+    if (value < 7) return Star;
+    return Gem;
   };
 
-  const getEmojiForHassle = (value: number): string => {
-    if (value < 4) return '🛠️';
-    if (value < 7) return '⚡';
-    return '🎯';
+  const getIconForHassle = (value: number): LucideIcon => {
+    if (value < 4) return ToolCase;
+    if (value < 7) return Zap;
+    return CircleCheckBig;
   };
 
   const handleChange = (key: keyof Preferences, value: number) => {
@@ -51,21 +46,21 @@ export function PersonalisationSliders({
       <SliderField
         label="Budget Flexibility"
         value={preferences.budget_flexibility}
-        emoji={getEmojiForBudget(preferences.budget_flexibility)}
+        icon={getIconForBudget(preferences.budget_flexibility)}
         onChange={(v) => handleChange('budget_flexibility', v)}
         description="0 = tight budget, 10 = very flexible"
       />
       <SliderField
         label="Condition Standards"
         value={preferences.condition_standards}
-        emoji={getEmojiForCondition(preferences.condition_standards)}
+        icon={getIconForCondition(preferences.condition_standards)}
         onChange={(v) => handleChange('condition_standards', v)}
         description="0 = any condition, 10 = pristine only"
       />
       <SliderField
         label="Hassle Tolerance"
         value={preferences.hassle_tolerance}
-        emoji={getEmojiForHassle(preferences.hassle_tolerance)}
+        icon={getIconForHassle(preferences.hassle_tolerance)}
         onChange={(v) => handleChange('hassle_tolerance', v)}
         description="0 = willing to fix, 10 = must work immediately"
       />
@@ -73,28 +68,16 @@ export function PersonalisationSliders({
   );
 }
 
-/**
- * SliderField - Reusable slider input component using shadcn/ui
- *
- * Sub-component for rendering individual slider with label, value display, and emoji.
- *
- * @param label - Display name for the slider
- * @param value - Current value (0-10)
- * @param emoji - Emoji icon to display
- * @param onChange - Callback when slider changes
- * @param description - Optional help text
- * @returns Rendered slider component
- */
 function SliderField({
   label,
   value,
-  emoji,
+  icon: Icon,
   onChange,
   description,
 }: {
   label: string;
   value: number;
-  emoji: string;
+  icon: LucideIcon;
   onChange: (value: number) => void;
   description?: string;
 }) {
@@ -102,7 +85,7 @@ function SliderField({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <Label className="flex items-center gap-2 text-base">
-          <Emoji>{emoji}</Emoji>
+          <Icon className="h-4 w-4" aria-hidden={true} />
           {label}
         </Label>
         <Small className="text-primary">{value}/10</Small>

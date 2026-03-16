@@ -11,18 +11,30 @@ export async function getRecommendation(
   preferences: Preferences
 ): Promise<RecommendationResult> {
   const request: RecommendationRequest = { item, preferences };
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60_000);
 
-  const response = await fetch(`${API_URL}/api/recommend`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
-  });
+  try {
+    const response = await fetch(`${API_URL}/api/recommend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal: controller.signal,
+    });
 
-  if (!response.ok) {
-    throw await handleAPIError(response);
+    if (!response.ok) {
+      throw await handleAPIError(response);
+    }
+
+    return response.json();
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error('The request timed out — the backend may be slow. Please try again.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  return response.json();
 }
 
 /**
