@@ -83,9 +83,9 @@ export function PersonalisationSliders({
         label="How often will you use it?"
         value={preferences.use_frequency}
         options={[
-          { value: 'occasional', label: 'Occasional' },
-          { value: 'regular', label: 'Regular' },
-          { value: 'daily_driver', label: 'Daily Driver' },
+          { value: 'occasional', label: 'Infrequent' },
+          { value: 'regular', label: 'Sometimes' },
+          { value: 'daily_driver', label: 'Daily' },
         ]}
         onChange={(v) => onPreferencesChange({ ...preferences, use_frequency: v as Preferences['use_frequency'] })}
       />

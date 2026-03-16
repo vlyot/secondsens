@@ -29,6 +29,8 @@ export interface RecommendationResponse {
   reasoning: string;
   confidence_score: string;
   timestamp: string;
+  new_product_exception?: boolean;
+  exception_message?: string;
 }
 
 export interface RankedOption {

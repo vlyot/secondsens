@@ -54,7 +54,7 @@ export function LandingPage({ onGetStarted, onExplore }: LandingPageProps) {
 
               <motion.div variants={staggerItemVariants}>
                 <Lead className="text-xl text-white/90 max-w-3xl text-pretty drop-shadow-lg">
-                  Discover the best value on used gaming peripherals. Smart recommendations based on your preferences and market data.
+                  Should you purchase it brand new or used? Smart recommendations based on your preferences and market data.
                 </Lead>
               </motion.div>
 

@@ -56,6 +56,25 @@ func (rs *RecommendationService) Generate(
 	good := computeStats(prices.Good)
 	wellUsed := computeStats(prices.WellUsed)
 
+	// Clamp avg prices to enforce: brandNew ≥ likeNew ≥ good ≥ wellUsed.
+	// Inverted averages (e.g. scraped likeNew data priced above brandNew) would mislead the LLM.
+	likeNew.avg = math.Min(likeNew.avg, brandNew.avg)
+	good.avg = math.Min(good.avg, likeNew.avg)
+	wellUsed.avg = math.Min(wellUsed.avg, good.avg)
+
+	// Detect a new-product-only market: brand new exists but no secondhand listings at all.
+	if len(prices.LikeNew) == 0 && len(prices.Good) == 0 && len(prices.WellUsed) == 0 {
+		return &domain.RecommendationResponse{
+			Success:             true,
+			ProductName:         canonicalName,
+			Recommendations:     []domain.RankedOption{},
+			MarketStats:         domain.MarketStats{BrandNew: domain.MarketTier{AvgPrice: brandNew.avg, Range: domain.PriceRange{Min: brandNew.min, Max: brandNew.max}}},
+			Timestamp:           time.Now().UTC().Format(time.RFC3339),
+			NewProductException: true,
+			ExceptionMessage:    "No secondhand market found for this product — it may be too new.",
+		}, nil
+	}
+
 	budgetLine := fmt.Sprintf("Budget Flexibility: %d/10  (0=very tight budget, 10=very flexible)", prefs.BudgetFlexibility)
 	if !prefs.BudgetFlexibilityActive {
 		budgetLine = "Budget Flexibility: user does not consider this factor — ignore it in your ranking"

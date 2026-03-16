@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { TriangleAlert } from 'lucide-react';
 import type { RecommendationResponse, RankedOption } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -45,39 +46,56 @@ export function RecommendationDisplay({
         </div>
       </motion.div>
 
+      {/* New product exception — no secondhand market exists */}
+      {data.new_product_exception && (
+        <motion.div variants={staggerItemVariants}>
+          <Alert variant="destructive">
+            <TriangleAlert className="h-4 w-4" />
+            <AlertTitle>No Secondhand Market Found</AlertTitle>
+            <AlertDescription>{data.exception_message}</AlertDescription>
+          </Alert>
+        </motion.div>
+      )}
+
       {/* Rankings */}
-      <motion.div className="space-y-4" variants={staggerItemVariants}>
-        <H3 className="border-0 scroll-m-0">Top Recommendations</H3>
-        <div className="flex flex-col gap-6 max-w-2xl mx-auto">
-          {data.recommendations.map((rec, index) => (
-            <motion.div
-              key={rec.rank}
-              initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1, duration: 0.4 }}
-            >
-              <RankingCard
-                recommendation={rec}
-                onFindListings={onFindListings}
-              />
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
+      {!data.new_product_exception && (
+        <motion.div className="space-y-4" variants={staggerItemVariants}>
+          <H3 className="border-0 scroll-m-0">Top Recommendations</H3>
+          <div className="flex flex-col gap-6 max-w-2xl mx-auto">
+            {data.recommendations.map((rec, index) => (
+              <motion.div
+                key={rec.rank}
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1, duration: 0.4 }}
+              >
+                <RankingCard
+                  recommendation={rec}
+                  onFindListings={onFindListings}
+                />
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Market stats */}
-      <motion.div className="space-y-3" variants={staggerItemVariants}>
-        <H3 className="border-0 scroll-m-0">Market Statistics</H3>
-        <MarketStatsTable data={data} />
-      </motion.div>
+      {!data.new_product_exception && (
+        <motion.div className="space-y-3" variants={staggerItemVariants}>
+          <H3 className="border-0 scroll-m-0">Market Statistics</H3>
+          <MarketStatsTable data={data} />
+        </motion.div>
+      )}
 
       {/* Reasoning */}
-      <motion.div variants={staggerItemVariants}>
-        <Alert>
-          <AlertTitle>Why This Recommendation?</AlertTitle>
-          <AlertDescription>{data.reasoning}</AlertDescription>
-        </Alert>
-      </motion.div>
+      {!data.new_product_exception && (
+        <motion.div variants={staggerItemVariants}>
+          <Alert>
+            <AlertTitle>Why This Recommendation?</AlertTitle>
+            <AlertDescription>{data.reasoning}</AlertDescription>
+          </Alert>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

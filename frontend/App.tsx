@@ -183,7 +183,7 @@ function App() {
             <div className="max-w-2xl mx-auto">
               <header className="mb-8 text-center relative">
                 <H1 className="text-white mb-2 drop-shadow-2xl">SecondSense</H1>
-                <P className="text-white/90 mt-0 drop-shadow-lg">Find the best deals on used gaming peripherals</P>
+                <P className="text-white/90 mt-0 drop-shadow-lg">Should you purchase it brand new or used?</P>
               </header>
 
               <div className="bg-card text-card-foreground rounded-lg shadow-lg p-6 md:p-8">
