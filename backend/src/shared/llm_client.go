@@ -47,9 +47,9 @@ func (l *LLMClient) SearchWithGrounding(ctx context.Context, prompt string) (str
 
 // GenerateJSON calls Gemini for structured JSON output without web access.
 // Use for product validation and recommendation ranking.
-// Timeout: 30s. Retries: 3 with exponential backoff.
+// Timeout: 60s. Retries: 3 with exponential backoff.
 func (l *LLMClient) GenerateJSON(ctx context.Context, prompt string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
 	config := &genai.GenerateContentConfig{

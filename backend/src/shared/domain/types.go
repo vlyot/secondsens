@@ -24,6 +24,7 @@ type Preferences struct {
 type RecommendationResponse struct {
 	Success              bool           `json:"success"`
 	ProductName          string         `json:"product_name"`
+	ProductDescription   string         `json:"product_description,omitempty"`
 	Recommendations      []RankedOption `json:"recommendations"`
 	MarketStats          MarketStats    `json:"market_stats"`
 	Reasoning            string         `json:"reasoning"`

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { H3, Muted, Small, Display, PriceDisplay, StatDisplay } from '@/components/ui/typography';
+import { H3, Large, Muted, Small, Display, PriceDisplay, StatDisplay } from '@/components/ui/typography';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { staggerContainerVariants, staggerItemVariants } from '@/animations/variants';
 
@@ -39,6 +39,18 @@ export function RecommendationDisplay({
       {/* Product header */}
       <motion.div variants={staggerItemVariants}>
         <Display>{data.product_name}</Display>
+        {data.product_description && (
+          <Muted className="mt-1">{data.product_description}</Muted>
+        )}
+        {!data.new_product_exception && data.recommendations.length > 0 && (
+          <Large className="mt-3 font-semibold">
+            Based on your preferences, you should purchase this{' '}
+            <span className="text-primary">
+              {data.recommendations[0].condition === 'brand_new' ? 'brand new' : 'secondhand'}
+            </span>
+            .
+          </Large>
+        )}
         <div className="flex items-center gap-3 mt-2">
           <Badge variant={getConfidenceVariant(data.confidence_score)}>
             {data.confidence_score} Confidence

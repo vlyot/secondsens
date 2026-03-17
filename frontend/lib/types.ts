@@ -24,6 +24,7 @@ export interface Preferences {
 export interface RecommendationResponse {
   success: boolean;
   product_name: string;
+  product_description?: string;
   recommendations: RankedOption[];
   market_stats: MarketStats;
   reasoning: string;

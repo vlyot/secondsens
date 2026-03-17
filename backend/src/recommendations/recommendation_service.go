@@ -56,17 +56,27 @@ func (rs *RecommendationService) Generate(
 	good := computeStats(prices.Good)
 	wellUsed := computeStats(prices.WellUsed)
 
-	// Clamp avg prices to enforce: brandNew ≥ likeNew ≥ good ≥ wellUsed.
-	// Inverted averages (e.g. scraped likeNew data priced above brandNew) would mislead the LLM.
+	// Clamp avg, min, and max prices to enforce monotonic ordering:
+	// brandNew ≥ likeNew ≥ good ≥ wellUsed across all stats.
+	// Inverted values from scraping would otherwise mislead the LLM.
 	likeNew.avg = math.Min(likeNew.avg, brandNew.avg)
 	good.avg = math.Min(good.avg, likeNew.avg)
 	wellUsed.avg = math.Min(wellUsed.avg, good.avg)
+
+	likeNew.max = math.Min(likeNew.max, brandNew.max)
+	good.max = math.Min(good.max, likeNew.max)
+	wellUsed.max = math.Min(wellUsed.max, good.max)
+
+	likeNew.min = math.Min(likeNew.min, brandNew.min)
+	good.min = math.Min(good.min, likeNew.min)
+	wellUsed.min = math.Min(wellUsed.min, good.min)
 
 	// Detect a new-product-only market: brand new exists but no secondhand listings at all.
 	if len(prices.LikeNew) == 0 && len(prices.Good) == 0 && len(prices.WellUsed) == 0 {
 		return &domain.RecommendationResponse{
 			Success:             true,
 			ProductName:         canonicalName,
+			ProductDescription:  "",
 			Recommendations:     []domain.RankedOption{},
 			MarketStats:         domain.MarketStats{BrandNew: domain.MarketTier{AvgPrice: brandNew.avg, Range: domain.PriceRange{Min: brandNew.min, Max: brandNew.max}}},
 			Timestamp:           time.Now().UTC().Format(time.RFC3339),
@@ -91,9 +101,9 @@ func (rs *RecommendationService) Generate(
 	}
 
 	useFreqMap := map[string]string{
-		"occasional":   "occasional use",
-		"regular":      "regular use",
-		"daily_driver": "daily driver (heavy, frequent use)",
+		"occasional":   "uses occasionally / infrequently",
+		"regular":      "uses regularly / a few times a week",
+		"daily_driver": "uses daily or very frequently",
 	}
 	urgencyMap := map[string]string{
 		"no_rush":      "no rush — happy to wait for a better deal",
@@ -200,9 +210,10 @@ Valid condition values: "brand_new", "like_new", "good", "well_used". confidence
 	}
 
 	return &domain.RecommendationResponse{
-		Success:     true,
-		ProductName: canonicalName,
-		Recommendations: recommendations,
+		Success:            true,
+		ProductName:        canonicalName,
+		ProductDescription: "",
+		Recommendations:    recommendations,
 		MarketStats: domain.MarketStats{
 			BrandNew: domain.MarketTier{AvgPrice: brandNew.avg, Range: domain.PriceRange{Min: brandNew.min, Max: brandNew.max}},
 			LikeNew:  domain.MarketTier{AvgPrice: likeNew.avg, Range: domain.PriceRange{Min: likeNew.min, Max: likeNew.max}},
