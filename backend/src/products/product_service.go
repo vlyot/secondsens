@@ -38,6 +38,16 @@ func NewProductService(repo *ProductRepository, llm llmClient, validationCache *
 	return &ProductService{repo: repo, llm: llm, validationCache: validationCache}
 }
 
+// GetAllCanonicalNames returns the canonical name of every product in the catalog.
+func (ps *ProductService) GetAllCanonicalNames() []string {
+	all := ps.repo.GetAll()
+	names := make([]string, len(all))
+	for i, p := range all {
+		names[i] = p.CanonicalName
+	}
+	return names
+}
+
 // Search finds a product by query string.
 func (ps *ProductService) Search(query string) SearchResult {
 	normalized := normalizeString(query)

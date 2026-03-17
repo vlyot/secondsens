@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import LandingPage from '@/pages/Landing';
 import SearchPage from '@/pages/SearchPage';
 import PreferencesPage from '@/pages/PreferencesPage';
 import ResultsPage from '@/pages/ResultsPage';
 import ErrorPage from '@/pages/ErrorPage';
+import DocsPage from '@/pages/DocsPage';
 import ProductDisambiguation from '@/components/ProductDisambiguation';
 import LoadingState from '@/components/LoadingState';
 import BackgroundLayout from '@/components/layout/BackgroundLayout';
@@ -16,7 +17,25 @@ import { getMarketplaceLinks } from '@/lib/marketplaceLinks';
 import { getRecommendation } from '@/services/api';
 import type { Preferences, Product, RecommendationResponse } from '@/lib/types';
 
-type AppStep = 'landing' | 'search' | 'sliders' | 'results' | 'disambiguation' | 'error';
+type AppStep = 'landing' | 'search' | 'sliders' | 'results' | 'disambiguation' | 'error' | 'docs';
+
+interface SharePayload {
+  product: string;
+  preferences: Preferences;
+}
+
+function encodeSharePayload(product: string, preferences: Preferences): string {
+  const payload: SharePayload = { product, preferences };
+  return btoa(encodeURIComponent(JSON.stringify(payload)));
+}
+
+function decodeSharePayload(encoded: string): SharePayload | null {
+  try {
+    return JSON.parse(decodeURIComponent(atob(encoded)));
+  } catch {
+    return null;
+  }
+}
 
 interface AppState {
   currentStep: AppStep;
@@ -41,8 +60,44 @@ function App() {
     disambiguation: null,
   });
 
+  // Decode ?s= share param on mount and auto-run recommendation
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const encoded = params.get('s');
+    if (!encoded) return;
+    const payload = decodeSharePayload(encoded);
+    if (!payload) return;
+    setState((prev) => ({
+      ...prev,
+      searchQuery: payload.product,
+      preferences: payload.preferences,
+      isLoading: true,
+      error: null,
+    }));
+    getRecommendation(payload.product, payload.preferences)
+      .then((result) => {
+        if ('status' in result && result.status === 'AMBIGUOUS') {
+          setState((prev) => ({ ...prev, currentStep: 'disambiguation', disambiguation: result.matches, isLoading: false }));
+          return;
+        }
+        setState((prev) => ({ ...prev, currentStep: 'results', recommendation: result as RecommendationResponse, isLoading: false }));
+      })
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : 'Something went wrong.';
+        setState((prev) => ({ ...prev, currentStep: 'error', error: message, isLoading: false }));
+      });
+  }, []);
+
   const handleGetStarted = () => {
     setState((prev) => ({ ...prev, currentStep: 'search' }));
+  };
+
+  const handleExplore = () => {
+    setState((prev) => ({ ...prev, currentStep: 'docs' }));
+  };
+
+  const handleDocsBack = () => {
+    setState((prev) => ({ ...prev, currentStep: 'landing' }));
   };
 
   const handleSearch = (query: string) => {
@@ -78,10 +133,13 @@ function App() {
         return;
       }
 
+      const rec = result as RecommendationResponse;
+      const encoded = encodeSharePayload(query, state.preferences);
+      window.history.replaceState(null, '', `?s=${encoded}`);
       setState((prev) => ({
         ...prev,
         currentStep: 'results',
-        recommendation: result as RecommendationResponse,
+        recommendation: rec,
         isLoading: false,
       }));
     } catch (err) {
@@ -122,8 +180,8 @@ function App() {
     }));
   };
 
-  const handleFindListings = (condition: string, productName: string) => {
-    const { carousell, facebook } = getMarketplaceLinks(productName, condition);
+  const handleFindListings = (_condition: string, productName: string) => {
+    const { carousell, facebook } = getMarketplaceLinks(productName);
     window.open(carousell, '_blank', 'noopener,noreferrer');
     window.open(facebook, '_blank', 'noopener,noreferrer');
   };
@@ -138,6 +196,7 @@ function App() {
   };
 
   const handleNewSearch = () => {
+    window.history.replaceState(null, '', window.location.pathname);
     setState((prev) => ({
       ...prev,
       currentStep: 'search',
@@ -167,7 +226,11 @@ function App() {
       </div>
 
       {state.currentStep === 'landing' && (
-        <LandingPage onGetStarted={handleGetStarted} />
+        <LandingPage onGetStarted={handleGetStarted} onExplore={handleExplore} />
+      )}
+
+      {state.currentStep === 'docs' && (
+        <DocsPage onBack={handleDocsBack} />
       )}
 
       {state.currentStep === 'search' && (
@@ -177,7 +240,7 @@ function App() {
         />
       )}
 
-      {state.currentStep !== 'landing' && state.currentStep !== 'search' && (
+      {state.currentStep !== 'landing' && state.currentStep !== 'search' && state.currentStep !== 'docs' && (
         <BackgroundLayout>
           <div className="min-h-screen p-4 md:p-8">
             <div className="max-w-2xl mx-auto">

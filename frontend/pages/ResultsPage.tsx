@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import RecommendationDisplay from '@/components/RecommendationDisplay';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,14 @@ interface ResultsPageProps {
  */
 export function ResultsPage({ recommendation, onFindListings, onNewSearch }: ResultsPageProps) {
   const prefersReducedMotion = useReducedMotion();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   return (
     <motion.div
@@ -34,12 +43,19 @@ export function ResultsPage({ recommendation, onFindListings, onNewSearch }: Res
         />
       </motion.div>
 
-      <motion.div variants={staggerItemVariants}>
+      <motion.div variants={staggerItemVariants} className="flex gap-3">
         <Button
           onClick={onNewSearch}
-          className="w-full transition-all duration-200 hover:scale-105 active:scale-95"
+          className="flex-1 transition-all duration-200 hover:scale-105 active:scale-95"
         >
           Search Another Product
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleCopyLink}
+          className="transition-all duration-200"
+        >
+          {copied ? 'Copied!' : 'Copy Link'}
         </Button>
       </motion.div>
     </motion.div>

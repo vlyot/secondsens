@@ -46,6 +46,7 @@ func main() {
 	router.Use(corsMiddleware())
 
 	router.GET("/health", healthHandler)
+	router.GET("/api/products", products.HandleProductList(productService))
 	router.GET("/api/products/search", products.HandleProductSearch(productService))
 	router.POST("/api/recommend", recommendations.HandleRecommendation(productService, priceService, recService, recCache))
 

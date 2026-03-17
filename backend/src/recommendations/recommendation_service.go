@@ -32,6 +32,14 @@ type tierStats struct {
 	max float64
 }
 
+// estimatedTierPrice is an LLM-inferred price for a tier with no real market data.
+type estimatedTierPrice struct {
+	Condition string  `json:"condition"`
+	AvgPrice  float64 `json:"avg_price"`
+	Min       float64 `json:"min"`
+	Max       float64 `json:"max"`
+}
+
 // rankingResponse is the JSON schema returned by Gemini for recommendation ranking.
 type rankingResponse struct {
 	Rankings []struct {
@@ -40,8 +48,9 @@ type rankingResponse struct {
 		AvgPrice      float64 `json:"avg_price"`
 		Justification string  `json:"justification"`
 	} `json:"rankings"`
-	Reasoning       string `json:"reasoning"`
-	ConfidenceScore string `json:"confidence_score"`
+	EstimatedPrices []estimatedTierPrice `json:"estimated_prices"`
+	Reasoning       string               `json:"reasoning"`
+	ConfidenceScore string               `json:"confidence_score"`
 }
 
 // Generate produces ranked recommendations for a product given price data and user preferences.
@@ -55,21 +64,6 @@ func (rs *RecommendationService) Generate(
 	likeNew := computeStats(prices.LikeNew)
 	good := computeStats(prices.Good)
 	wellUsed := computeStats(prices.WellUsed)
-
-	// Clamp avg, min, and max prices to enforce monotonic ordering:
-	// brandNew ≥ likeNew ≥ good ≥ wellUsed across all stats.
-	// Inverted values from scraping would otherwise mislead the LLM.
-	likeNew.avg = math.Min(likeNew.avg, brandNew.avg)
-	good.avg = math.Min(good.avg, likeNew.avg)
-	wellUsed.avg = math.Min(wellUsed.avg, good.avg)
-
-	likeNew.max = math.Min(likeNew.max, brandNew.max)
-	good.max = math.Min(good.max, likeNew.max)
-	wellUsed.max = math.Min(wellUsed.max, good.max)
-
-	likeNew.min = math.Min(likeNew.min, brandNew.min)
-	good.min = math.Min(good.min, likeNew.min)
-	wellUsed.min = math.Min(wellUsed.min, good.min)
 
 	// Detect a new-product-only market: brand new exists but no secondhand listings at all.
 	if len(prices.LikeNew) == 0 && len(prices.Good) == 0 && len(prices.WellUsed) == 0 {
@@ -125,13 +119,42 @@ func (rs *RecommendationService) Generate(
 		contextLine = "\nAdditional user context: " + prefs.Context
 	}
 
+	// Build per-tier price lines, flagging tiers with no real data.
+	tierLine := func(label string, s tierStats, hasData bool) string {
+		if hasData {
+			return fmt.Sprintf("%s: avg S$%.2f, range S$%.2f–%.2f", label, s.avg, s.min, s.max)
+		}
+		return fmt.Sprintf("%s: NO DATA — estimate required", label)
+	}
+
+	// Collect which tiers need estimates so we can include them in the prompt.
+	var missingTiers []string
+	if len(prices.LikeNew) == 0 {
+		missingTiers = append(missingTiers, "like_new")
+	}
+	if len(prices.Good) == 0 {
+		missingTiers = append(missingTiers, "good")
+	}
+	if len(prices.WellUsed) == 0 {
+		missingTiers = append(missingTiers, "well_used")
+	}
+
+	estimateInstruction := ""
+	if len(missingTiers) > 0 {
+		estimateInstruction = fmt.Sprintf(`
+Some condition tiers have no real market data. For each one, infer a plausible SGD price estimate
+based on the known tiers and your knowledge of typical secondhand depreciation for this product.
+Include these in "estimated_prices" (one entry per missing tier). Use realistic ranges — not zero.
+Missing tiers: %v`, missingTiers)
+	}
+
 	prompt := fmt.Sprintf(
 		`Product: %s
 Market prices (SGD):
-  Brand New: avg S$%.2f, range S$%.2f–%.2f
-  Like New:  avg S$%.2f, range S$%.2f–%.2f
-  Good:      avg S$%.2f, range S$%.2f–%.2f
-  Well Used: avg S$%.2f, range S$%.2f–%.2f
+  %s
+  %s
+  %s
+  %s
 
 User preferences:
   %s
@@ -140,6 +163,7 @@ User preferences:
   %s
   %s
   %s%s
+%s
 
 Rank the top 3 condition tiers for this user. Factor in all six preferences together:
 - Budget Flexibility and Quality Priority guide which price/condition tradeoff suits them
@@ -155,16 +179,21 @@ Return JSON ONLY (no markdown):
     {"rank": 2, "condition": "good", "avg_price": 70.0, "justification": "..."},
     {"rank": 3, "condition": "brand_new", "avg_price": 150.0, "justification": "..."}
   ],
+  "estimated_prices": [
+    {"condition": "good", "avg_price": 65.0, "min": 50.0, "max": 80.0}
+  ],
   "reasoning": "overall explanation of why these tiers suit the user",
   "confidence_score": "High"
 }
-Valid condition values: "brand_new", "like_new", "good", "well_used". confidence_score: "High", "Medium", or "Low".`,
+Valid condition values: "brand_new", "like_new", "good", "well_used". confidence_score: "High", "Medium", or "Low".
+If no tiers are missing, return "estimated_prices": [].`,
 		canonicalName,
-		brandNew.avg, brandNew.min, brandNew.max,
-		likeNew.avg, likeNew.min, likeNew.max,
-		good.avg, good.min, good.max,
-		wellUsed.avg, wellUsed.min, wellUsed.max,
+		tierLine("Brand New", brandNew, len(prices.BrandNew) > 0),
+		tierLine("Like New", likeNew, len(prices.LikeNew) > 0),
+		tierLine("Good", good, len(prices.Good) > 0),
+		tierLine("Well Used", wellUsed, len(prices.WellUsed) > 0),
 		budgetLine, qualityLine, riskLine, useFreqLine, urgencyLine, resaleLine, contextLine,
+		estimateInstruction,
 	)
 
 	raw, err := rs.llm.GenerateJSON(ctx, prompt)
@@ -177,18 +206,29 @@ Valid condition values: "brand_new", "like_new", "good", "well_used". confidence
 		return nil, fmt.Errorf("failed to parse ranking response: %w (raw: %.200s)", err, raw)
 	}
 
-	statsMap := map[string]tierStats{
-		"brand_new": brandNew,
-		"like_new":  likeNew,
-		"good":      good,
-		"well_used": wellUsed,
+	// Fill any zero-stats tiers with LLM estimates.
+	statsMap := map[string]*tierStats{
+		"brand_new": &brandNew,
+		"like_new":  &likeNew,
+		"good":      &good,
+		"well_used": &wellUsed,
+	}
+	for _, ep := range ranking.EstimatedPrices {
+		if s, ok := statsMap[ep.Condition]; ok && s.avg == 0 {
+			s.avg = ep.AvgPrice
+			s.min = ep.Min
+			s.max = ep.Max
+		}
 	}
 
 	brandNewAvg := brandNew.avg
 	recommendations := make([]domain.RankedOption, 0, len(ranking.Rankings))
 	for _, r := range ranking.Rankings {
-		stats := statsMap[r.Condition]
-		savingsAbs := math.Max(0, brandNewAvg-stats.avg)
+		s := statsMap[r.Condition]
+		if s == nil {
+			continue
+		}
+		savingsAbs := math.Max(0, brandNewAvg-s.avg)
 		savingsPct := 0.0
 		if brandNewAvg > 0 {
 			savingsPct = math.Round(savingsAbs/brandNewAvg*1000) / 10
@@ -196,10 +236,10 @@ Valid condition values: "brand_new", "like_new", "good", "well_used". confidence
 		recommendations = append(recommendations, domain.RankedOption{
 			Rank:      r.Rank,
 			Condition: r.Condition,
-			AvgPrice:  stats.avg,
+			AvgPrice:  s.avg,
 			PriceRange: domain.PriceRange{
-				Min: stats.min,
-				Max: stats.max,
+				Min: s.min,
+				Max: s.max,
 			},
 			SavingsVsNew: domain.SavingsInfo{
 				Absolute: math.Round(savingsAbs*100) / 100,

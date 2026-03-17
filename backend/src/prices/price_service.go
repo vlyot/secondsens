@@ -74,12 +74,12 @@ func (ps *PriceService) FetchPrices(ctx context.Context, canonicalName string) (
 		return nil, fmt.Errorf("failed to parse price response: %w (raw: %.200s)", err, raw)
 	}
 
-	data := &domain.PriceData{
+	data := clampTierAverages(&domain.PriceData{
 		BrandNew: validateTier(prices.BrandNew),
 		LikeNew:  validateTier(prices.LikeNew),
 		Good:     validateTier(prices.Good),
 		WellUsed: validateTier(prices.WellUsed),
-	}
+	})
 
 	if len(data.BrandNew) == 0 && len(data.LikeNew) == 0 && len(data.Good) == 0 && len(data.WellUsed) == 0 {
 		return nil, fmt.Errorf("no valid prices found for %q", canonicalName)
@@ -106,6 +106,32 @@ func validateTier(prices []float64) []float64 {
 		}
 	}
 	return filtered
+}
+
+// clampTierAverages enforces BrandNew ≥ LikeNew ≥ Good ≥ WellUsed by scaling
+// down any tier whose median exceeds the tier above it.
+func clampTierAverages(d *domain.PriceData) *domain.PriceData {
+	tiers := []*[]float64{&d.BrandNew, &d.LikeNew, &d.Good, &d.WellUsed}
+	medians := make([]float64, len(tiers))
+	for i, t := range tiers {
+		if len(*t) > 0 {
+			medians[i] = median(*t)
+		}
+	}
+	for i := 1; i < len(tiers); i++ {
+		upper := medians[i-1]
+		if upper == 0 || medians[i] <= upper {
+			continue
+		}
+		scale := upper / medians[i]
+		scaled := make([]float64, len(*tiers[i]))
+		for j, v := range *tiers[i] {
+			scaled[j] = math.Round(v*scale*100) / 100
+		}
+		*tiers[i] = scaled
+		medians[i] = upper
+	}
+	return d
 }
 
 func median(prices []float64) float64 {

@@ -32,6 +32,14 @@ export interface RecommendationResponse {
   timestamp: string;
   new_product_exception?: boolean;
   exception_message?: string;
+  estimated_prices?: EstimatedTierPrice[];
+}
+
+export interface EstimatedTierPrice {
+  condition: string;
+  avg_price: number;
+  min: number;
+  max: number;
 }
 
 export interface RankedOption {

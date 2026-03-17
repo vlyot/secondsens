@@ -39,7 +39,7 @@ export function ProductDisambiguation({
         </DialogHeader>
 
         {/* Product list */}
-        <div className="space-y-2 max-h-64 overflow-y-auto">
+        <div className="space-y-2 max-h-[80vh] overflow-y-auto">
           <AnimatePresence>
             {products.map((product, index) => (
               <motion.button

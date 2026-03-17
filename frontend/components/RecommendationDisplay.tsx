@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { H3, Large, Muted, Small, Display, PriceDisplay, StatDisplay } from '@/components/ui/typography';
+import { Progress } from '@/components/ui/progress';
+import { H3, Muted, Small, Display, PriceDisplay, StatDisplay } from '@/components/ui/typography';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { staggerContainerVariants, staggerItemVariants } from '@/animations/variants';
 
@@ -42,20 +43,22 @@ export function RecommendationDisplay({
         {data.product_description && (
           <Muted className="mt-1">{data.product_description}</Muted>
         )}
-        {!data.new_product_exception && data.recommendations.length > 0 && (
-          <Large className="mt-3 font-semibold">
-            Based on your preferences, you should purchase this{' '}
-            <span className="text-primary">
-              {data.recommendations[0].condition === 'brand_new' ? 'brand new' : 'secondhand'}
-            </span>
-            .
-          </Large>
-        )}
-        <div className="flex items-center gap-3 mt-2">
-          <Badge variant={getConfidenceVariant(data.confidence_score)}>
-            {data.confidence_score} Confidence
-          </Badge>
-        </div>
+        {!data.new_product_exception && data.recommendations.length > 0 && (() => {
+          const isBrandNew = data.recommendations[0].condition === 'brand_new';
+          return (
+            <div className={`mt-4 rounded-xl px-5 py-4 ${isBrandNew ? 'bg-blue-50 dark:bg-blue-950/40' : 'bg-green-50 dark:bg-green-950/40'}`}>
+              <H3 className={`border-0 scroll-m-0 ${isBrandNew ? 'text-blue-900 dark:text-blue-200' : 'text-green-900 dark:text-green-200'}`}>
+                Buy {isBrandNew ? 'Brand New' : 'Secondhand'}
+              </H3>
+              <Muted className="mt-1">Based on your preferences and current market prices</Muted>
+              <div className="mt-2">
+                <Badge variant={getConfidenceVariant(data.confidence_score)}>
+                  {data.confidence_score} Confidence
+                </Badge>
+              </div>
+            </div>
+          );
+        })()}
       </motion.div>
 
       {/* New product exception — no secondhand market exists */}
@@ -95,7 +98,7 @@ export function RecommendationDisplay({
       {!data.new_product_exception && (
         <motion.div className="space-y-3" variants={staggerItemVariants}>
           <H3 className="border-0 scroll-m-0">Market Statistics</H3>
-          <MarketStatsTable data={data} />
+          <PriceBars data={data} prefersReducedMotion={prefersReducedMotion} />
         </motion.div>
       )}
 
@@ -131,7 +134,7 @@ function RankingCard({
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle>{recommendation.condition}</CardTitle>
+            <CardTitle>{formatCondition(recommendation.condition)}</CardTitle>
             <CardDescription>
               <Badge className="mt-2">#{recommendation.rank}</Badge>
             </CardDescription>
@@ -189,42 +192,67 @@ function RankingCard({
   );
 }
 
-/**
- * MarketStatsTable - Display market tier statistics
- *
- * @param data - Full recommendation response with market stats
- * @returns Rendered table component
- */
-function MarketStatsTable({ data }: { data: RecommendationResponse }) {
+const TIER_COLORS: Record<string, string> = {
+  'Brand New': 'bg-stone-400',
+  'Like New':  'bg-blue-500',
+  'Good':      'bg-green-500',
+  'Well Used': 'bg-amber-500',
+};
+
+function PriceBars({
+  data,
+  prefersReducedMotion,
+}: {
+  data: RecommendationResponse;
+  prefersReducedMotion: boolean;
+}) {
+  const estimatedKeys = new Set((data.estimated_prices ?? []).map((e) => e.condition));
+
+  const tiers = [
+    { label: 'Brand New', stats: data.market_stats.brand_new, key: 'brand_new' },
+    { label: 'Like New',  stats: data.market_stats.like_new,  key: 'like_new'  },
+    { label: 'Good',      stats: data.market_stats.good,      key: 'good'      },
+    { label: 'Well Used', stats: data.market_stats.well_used, key: 'well_used' },
+  ];
+
+  const brandNewAvg = data.market_stats.brand_new.avg_price;
+  const recommendedCondition = data.recommendations[0]?.condition;
+
   return (
     <Card>
-      <CardContent className="p-0">
-        <div className="w-full overflow-hidden">
-          <table className="w-full" aria-label="Market price statistics by condition">
-            <caption className="sr-only">Market price statistics by condition</caption>
-            <thead>
-              <tr className="bg-secondary border-b border-border">
-                <th className="px-4 py-3 text-left"><Small>Condition</Small></th>
-                <th className="px-4 py-3 text-right"><Small>Avg Price</Small></th>
-                <th className="px-4 py-3 text-right"><Small>Range</Small></th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { tier: 'Brand New', stats: data.market_stats.brand_new },
-                { tier: 'Like New', stats: data.market_stats.like_new },
-                { tier: 'Good', stats: data.market_stats.good },
-                { tier: 'Well Used', stats: data.market_stats.well_used },
-              ].map((row) => (
-                <tr key={row.tier} className="border-b border-border hover:bg-accent/50">
-                  <td className="px-4 py-3"><Small>{row.tier}</Small></td>
-                  <td className="px-4 py-3 text-right"><Muted className="mt-0">S${formatPrice(row.stats.avg_price)}</Muted></td>
-                  <td className="px-4 py-3 text-right"><Muted className="mt-0">S${formatPrice(row.stats.range.min)} - S${formatPrice(row.stats.range.max)}</Muted></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <CardContent className="py-4 space-y-4">
+        {tiers.map(({ label, stats, key }, index) => {
+          const pct = brandNewAvg > 0 ? Math.round((stats.avg_price / brandNewAvg) * 100) : 0;
+          const isRecommended = key === recommendedCondition;
+          return (
+            <motion.div
+              key={label}
+              className="space-y-1"
+              initial={prefersReducedMotion ? false : { opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.08, duration: 0.35 }}
+            >
+              <div className="flex justify-between items-baseline">
+                <span className="flex items-center gap-1.5">
+                  <Small className={isRecommended ? 'font-bold text-foreground' : ''}>
+                    {label}{isRecommended ? ' ★' : ''}
+                  </Small>
+                  {estimatedKeys.has(key) && (
+                    <span className="text-xs text-muted-foreground italic">est.</span>
+                  )}
+                </span>
+                <Muted className="mt-0 text-xs">
+                  S${formatPrice(stats.range.min)} – S${formatPrice(stats.range.max)}
+                </Muted>
+              </div>
+              <Progress
+                value={pct}
+                className={`h-2 ${TIER_COLORS[label] ? '[&>div]:' + TIER_COLORS[label] : ''}`}
+                aria-label={`${label} price: ${pct}% of brand new`}
+              />
+            </motion.div>
+          );
+        })}
       </CardContent>
     </Card>
   );
@@ -236,6 +264,17 @@ function MarketStatsTable({ data }: { data: RecommendationResponse }) {
  * @param price - Price value to format
  * @returns Formatted price string (e.g., "89.99")
  */
+const CONDITION_LABELS: Record<string, string> = {
+  brand_new: 'Brand New',
+  like_new:  'Like New',
+  good:      'Good',
+  well_used: 'Well Used',
+};
+
+function formatCondition(condition: string): string {
+  return CONDITION_LABELS[condition] ?? condition;
+}
+
 function formatPrice(price: number): string {
   return price.toFixed(2);
 }

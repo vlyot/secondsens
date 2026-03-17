@@ -4,6 +4,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// HandleProductList handles GET /api/products — returns all canonical product names.
+func HandleProductList(productService *ProductService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.JSON(200, productService.GetAllCanonicalNames())
+	}
+}
+
 // HandleProductSearch handles GET /api/products/search?q=query
 func HandleProductSearch(productService *ProductService) gin.HandlerFunc {
 	return func(c *gin.Context) {

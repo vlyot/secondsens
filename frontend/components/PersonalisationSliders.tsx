@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   Banknote, Wallet, BadgeDollarSign,
@@ -5,7 +6,9 @@ import {
   ShieldAlert, ShieldCheck, ShieldX,
 } from 'lucide-react';
 import type { Preferences } from '@/lib/types';
+import { PRESETS } from '@/lib/constants';
 import { Slider } from '@/components/ui/slider';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,6 +23,8 @@ export function PersonalisationSliders({
   preferences: Preferences;
   onPreferencesChange: (prefs: Preferences) => void;
 }) {
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
   const getIconForBudget = (value: number): LucideIcon => {
     if (value < 4) return Banknote;
     if (value < 7) return Wallet;
@@ -39,6 +44,7 @@ export function PersonalisationSliders({
   };
 
   const handleSliderChange = (key: keyof Preferences, value: number) => {
+    setActivePreset(null);
     onPreferencesChange({ ...preferences, [key]: value });
   };
 
@@ -52,6 +58,23 @@ export function PersonalisationSliders({
 
   return (
     <div className="space-y-8 w-full">
+      <div className="flex flex-wrap gap-2">
+        {PRESETS.map((preset) => (
+          <Button
+            key={preset.label}
+            type="button"
+            variant={activePreset === preset.label ? 'default' : 'outline'}
+            size="sm"
+            className="rounded-full"
+            onClick={() => {
+              setActivePreset(preset.label);
+              onPreferencesChange(preset.preferences);
+            }}
+          >
+            {preset.label}
+          </Button>
+        ))}
+      </div>
       <SliderField
         label="Budget Flexibility"
         value={preferences.budget_flexibility}
@@ -83,11 +106,11 @@ export function PersonalisationSliders({
         label="How often will you use it?"
         value={preferences.use_frequency}
         options={[
-          { value: 'occasional', label: 'Infrequent' },
+          { value: 'occasional', label: 'Occasionally' },
           { value: 'regular', label: 'Sometimes' },
           { value: 'daily_driver', label: 'Daily' },
         ]}
-        onChange={(v) => onPreferencesChange({ ...preferences, use_frequency: v as Preferences['use_frequency'] })}
+        onChange={(v) => { setActivePreset(null); onPreferencesChange({ ...preferences, use_frequency: v as Preferences['use_frequency'] }); }}
       />
       <SegmentedField
         label="Deal urgency"
@@ -97,7 +120,7 @@ export function PersonalisationSliders({
           { value: 'soon', label: 'Soon' },
           { value: 'need_it_now', label: 'Need It Now' },
         ]}
-        onChange={(v) => onPreferencesChange({ ...preferences, deal_urgency: v as Preferences['deal_urgency'] })}
+        onChange={(v) => { setActivePreset(null); onPreferencesChange({ ...preferences, deal_urgency: v as Preferences['deal_urgency'] }); }}
       />
       <SegmentedField
         label="Resale plans"
@@ -107,10 +130,10 @@ export function PersonalisationSliders({
           { value: 'maybe', label: 'Might Resell' },
           { value: 'definitely_reselling', label: 'Definitely Reselling' },
         ]}
-        onChange={(v) => onPreferencesChange({ ...preferences, resale_priority: v as Preferences['resale_priority'] })}
+        onChange={(v) => { setActivePreset(null); onPreferencesChange({ ...preferences, resale_priority: v as Preferences['resale_priority'] }); }}
       />
       <div className="space-y-2">
-        <Label htmlFor="context-input" className="text-base">Anything specific?</Label>
+        <Label htmlFor="context-input" className="text-base">Anything specific? (Or anything you would like us to know)</Label>
         <Textarea
           id="context-input"
           placeholder="e.g. must include original box, UK seller only…"
@@ -177,7 +200,7 @@ function SliderField({
           max={10}
           step={1}
           aria-label={label}
-          className="w-full"
+          className="w-full touch-none"
           disabled={!active}
         />
         <div className="flex justify-between">
