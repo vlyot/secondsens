@@ -5,6 +5,9 @@ import PreferencesPage from '@/pages/PreferencesPage';
 import ResultsPage from '@/pages/ResultsPage';
 import ErrorPage from '@/pages/ErrorPage';
 import DocsPage from '@/pages/DocsPage';
+import AuthPage from '@/pages/AuthPage';
+import HistoryPage from '@/pages/HistoryPage';
+import ProfilePage from '@/pages/ProfilePage';
 import ProductDisambiguation from '@/components/ProductDisambiguation';
 import LoadingState from '@/components/LoadingState';
 import BackgroundLayout from '@/components/layout/BackgroundLayout';
@@ -12,12 +15,13 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { ModeToggle } from '@/components/mode-toggle';
 import { H1, P } from '@/components/ui/typography';
 import { FlowBreadcrumbs } from '@/components/FlowBreadcrumbs';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { DEFAULT_PREFERENCES } from '@/lib/constants';
 import { getMarketplaceLinks } from '@/lib/marketplaceLinks';
-import { getRecommendation } from '@/services/api';
+import { getRecommendation, saveHistory, type HistoryItem } from '@/services/api';
 import type { Preferences, Product, RecommendationResponse } from '@/lib/types';
 
-type AppStep = 'landing' | 'search' | 'sliders' | 'results' | 'disambiguation' | 'error' | 'docs';
+type AppStep = 'landing' | 'search' | 'sliders' | 'results' | 'disambiguation' | 'error' | 'docs' | 'auth' | 'history' | 'profile';
 
 interface SharePayload {
   product: string;
@@ -48,7 +52,9 @@ interface AppState {
   disambiguation: Product[] | null;
 }
 
-function App() {
+function AppInner() {
+  const { user, session } = useAuth();
+
   const [state, setState] = useState<AppState>({
     currentStep: 'landing',
     searchQuery: '',
@@ -88,17 +94,9 @@ function App() {
       });
   }, []);
 
-  const handleGetStarted = () => {
-    setState((prev) => ({ ...prev, currentStep: 'search' }));
-  };
-
-  const handleExplore = () => {
-    setState((prev) => ({ ...prev, currentStep: 'docs' }));
-  };
-
-  const handleDocsBack = () => {
-    setState((prev) => ({ ...prev, currentStep: 'landing' }));
-  };
+  const handleGetStarted = () => setState((prev) => ({ ...prev, currentStep: 'search' }));
+  const handleExplore = () => setState((prev) => ({ ...prev, currentStep: 'docs' }));
+  const handleDocsBack = () => setState((prev) => ({ ...prev, currentStep: 'landing' }));
 
   const handleSearch = (query: string) => {
     setState((prev) => ({
@@ -142,6 +140,11 @@ function App() {
         recommendation: rec,
         isLoading: false,
       }));
+
+      // Fire-and-forget: save to history if signed in
+      if (session?.access_token) {
+        saveHistory(query, state.preferences, rec, session.access_token).catch(() => {});
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
       setState((prev) => ({
@@ -176,7 +179,6 @@ function App() {
       ...prev,
       currentStep: 'search',
       disambiguation: null,
-      // preserve searchQuery so the input is pre-filled
     }));
   };
 
@@ -208,39 +210,52 @@ function App() {
   };
 
   const handleGoBackToSearch = () => {
-    setState((prev) => ({
-      ...prev,
-      currentStep: 'search',
-      selectedProduct: null,
-    }));
+    setState((prev) => ({ ...prev, currentStep: 'search', selectedProduct: null }));
   };
 
   const handleGoBackToPreferences = () => {
     setState((prev) => ({ ...prev, currentStep: 'sliders' }));
   };
 
-  return (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <div className="absolute right-4 top-4 z-50">
-        <ModeToggle />
-      </div>
+  const handleRerunHistory = (item: HistoryItem) => {
+    setState((prev) => ({
+      ...prev,
+      currentStep: 'results',
+      searchQuery: item.product_name,
+      preferences: item.preferences,
+      recommendation: item.recommendation,
+      selectedProduct: null,
+      error: null,
+    }));
+  };
 
+  const handleGoToHistory = () => setState((prev) => ({ ...prev, currentStep: 'history' }));
+  const handleGoToProfile = () => setState((prev) => ({ ...prev, currentStep: 'profile' }));
+  const handleGoToAuth = () => setState((prev) => ({ ...prev, currentStep: 'auth' }));
+
+  const fullPageSteps: AppStep[] = ['landing', 'search', 'docs'];
+  const isFullPage = fullPageSteps.includes(state.currentStep);
+
+  return (
+    <>
       {state.currentStep === 'landing' && (
         <LandingPage onGetStarted={handleGetStarted} onExplore={handleExplore} />
       )}
-
       {state.currentStep === 'docs' && (
         <DocsPage onBack={handleDocsBack} />
       )}
-
       {state.currentStep === 'search' && (
         <SearchPage
           onSearch={handleSearch}
           isLoading={state.isLoading}
+          onGoToAuth={handleGoToAuth}
+          onGoToHistory={handleGoToHistory}
+          onGoToProfile={handleGoToProfile}
         />
       )}
 
-      {state.currentStep !== 'landing' && state.currentStep !== 'search' && state.currentStep !== 'docs' && (
+      {/* Auth / History / Profile — rendered inside the card layout */}
+      {!isFullPage && (
         <BackgroundLayout>
           <div className="min-h-screen p-4 md:p-8">
             <div className="max-w-2xl mx-auto">
@@ -250,15 +265,22 @@ function App() {
               </header>
 
               <div className="bg-card text-card-foreground rounded-lg shadow-lg p-6 md:p-8">
-                <FlowBreadcrumbs
-                  currentStep={
-                    state.currentStep === 'sliders' ? 'preferences'
-                    : state.currentStep === 'results' ? 'results'
-                    : 'search'
-                  }
-                  onGoToSearch={handleGoBackToSearch}
-                  onGoToPreferences={handleGoBackToPreferences}
-                />
+                {['sliders', 'results', 'error', 'disambiguation'].includes(state.currentStep) && (
+                  <FlowBreadcrumbs
+                    currentStep={
+                      state.currentStep === 'sliders' ? 'preferences'
+                      : state.currentStep === 'results' ? 'results'
+                      : 'search'
+                    }
+                    onGoToSearch={handleGoBackToSearch}
+                    onGoToPreferences={handleGoBackToPreferences}
+                    user={user}
+                    onGoToHistory={handleGoToHistory}
+                    onGoToProfile={handleGoToProfile}
+                    onGoToAuth={handleGoToAuth}
+                  />
+                )}
+
                 {state.currentStep === 'sliders' && (
                   <PreferencesPage
                     selectedProduct={state.selectedProduct ?? { id: '', canonical_name: state.searchQuery, category: '', aliases: [] }}
@@ -285,6 +307,24 @@ function App() {
                     suggestion="Try a more specific product name, or check that the backend is running."
                   />
                 )}
+
+                {state.currentStep === 'auth' && (
+                  <AuthPage onBack={() => setState((prev) => ({ ...prev, currentStep: 'search' }))} />
+                )}
+
+                {state.currentStep === 'history' && (
+                  <HistoryPage
+                    onRerun={handleRerunHistory}
+                    onBack={() => setState((prev) => ({ ...prev, currentStep: 'search' }))}
+                  />
+                )}
+
+                {state.currentStep === 'profile' && (
+                  <ProfilePage
+                    onRerun={handleRerunHistory}
+                    onBack={() => setState((prev) => ({ ...prev, currentStep: 'search' }))}
+                  />
+                )}
               </div>
 
               {state.currentStep === 'disambiguation' && state.disambiguation && (
@@ -303,6 +343,19 @@ function App() {
           </div>
         </BackgroundLayout>
       )}
+    </>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <AuthProvider>
+        <div className="absolute right-4 top-4 z-50">
+          <ModeToggle />
+        </div>
+        <AppInner />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

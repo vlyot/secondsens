@@ -1,0 +1,344 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Buy new vs used recommendation engine. Analyses product condition tiers with real-time price data and user preferences to recommend the optimal purchase strategy.",
+        "title": "SecondSense API",
+        "contact": {
+            "name": "SecondSense"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/api/history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the authenticated user's last 20 searches, newest first",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "history"
+                ],
+                "summary": "Get search history",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/history.HistoryItem"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Saves a completed recommendation to the authenticated user's history",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "history"
+                ],
+                "summary": "Save search to history",
+                "parameters": [
+                    {
+                        "description": "Search to save",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/history.SaveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Returns ok when the server is running",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "domain.MarketStats": {
+            "type": "object",
+            "properties": {
+                "brand_new": {
+                    "$ref": "#/definitions/domain.MarketTier"
+                },
+                "good": {
+                    "$ref": "#/definitions/domain.MarketTier"
+                },
+                "like_new": {
+                    "$ref": "#/definitions/domain.MarketTier"
+                },
+                "well_used": {
+                    "$ref": "#/definitions/domain.MarketTier"
+                }
+            }
+        },
+        "domain.MarketTier": {
+            "type": "object",
+            "properties": {
+                "avg_price": {
+                    "type": "number"
+                },
+                "range": {
+                    "$ref": "#/definitions/domain.PriceRange"
+                }
+            }
+        },
+        "domain.Preferences": {
+            "type": "object",
+            "properties": {
+                "budget_flexibility": {
+                    "type": "integer"
+                },
+                "budget_flexibility_active": {
+                    "type": "boolean"
+                },
+                "context": {
+                    "type": "string"
+                },
+                "deal_urgency": {
+                    "type": "string"
+                },
+                "quality_priority": {
+                    "type": "integer"
+                },
+                "quality_priority_active": {
+                    "type": "boolean"
+                },
+                "resale_priority": {
+                    "type": "string"
+                },
+                "risk_tolerance": {
+                    "type": "integer"
+                },
+                "risk_tolerance_active": {
+                    "type": "boolean"
+                },
+                "use_frequency": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.PriceRange": {
+            "type": "object",
+            "properties": {
+                "max": {
+                    "type": "number"
+                },
+                "min": {
+                    "type": "number"
+                }
+            }
+        },
+        "domain.RankedOption": {
+            "type": "object",
+            "properties": {
+                "avg_price": {
+                    "type": "number"
+                },
+                "condition": {
+                    "type": "string"
+                },
+                "justification": {
+                    "type": "string"
+                },
+                "price_range": {
+                    "$ref": "#/definitions/domain.PriceRange"
+                },
+                "rank": {
+                    "type": "integer"
+                },
+                "savings_vs_new": {
+                    "$ref": "#/definitions/domain.SavingsInfo"
+                }
+            }
+        },
+        "domain.RecommendationResponse": {
+            "type": "object",
+            "properties": {
+                "confidence_score": {
+                    "type": "string"
+                },
+                "exception_message": {
+                    "type": "string"
+                },
+                "market_stats": {
+                    "$ref": "#/definitions/domain.MarketStats"
+                },
+                "new_product_exception": {
+                    "type": "boolean"
+                },
+                "product_description": {
+                    "type": "string"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "reasoning": {
+                    "type": "string"
+                },
+                "recommendations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.RankedOption"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.SavingsInfo": {
+            "type": "object",
+            "properties": {
+                "absolute": {
+                    "type": "number"
+                },
+                "percent": {
+                    "type": "number"
+                }
+            }
+        },
+        "history.HistoryItem": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "preferences": {
+                    "$ref": "#/definitions/domain.Preferences"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "recommendation": {
+                    "$ref": "#/definitions/domain.RecommendationResponse"
+                }
+            }
+        },
+        "history.SaveRequest": {
+            "type": "object",
+            "required": [
+                "product_name"
+            ],
+            "properties": {
+                "preferences": {
+                    "$ref": "#/definitions/domain.Preferences"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "recommendation": {
+                    "$ref": "#/definitions/domain.RecommendationResponse"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Bearer token from Supabase Auth (required for /api/history endpoints only)",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

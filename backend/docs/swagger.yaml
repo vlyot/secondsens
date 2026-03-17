@@ -1,0 +1,226 @@
+basePath: /
+definitions:
+  domain.MarketStats:
+    properties:
+      brand_new:
+        $ref: '#/definitions/domain.MarketTier'
+      good:
+        $ref: '#/definitions/domain.MarketTier'
+      like_new:
+        $ref: '#/definitions/domain.MarketTier'
+      well_used:
+        $ref: '#/definitions/domain.MarketTier'
+    type: object
+  domain.MarketTier:
+    properties:
+      avg_price:
+        type: number
+      range:
+        $ref: '#/definitions/domain.PriceRange'
+    type: object
+  domain.Preferences:
+    properties:
+      budget_flexibility:
+        type: integer
+      budget_flexibility_active:
+        type: boolean
+      context:
+        type: string
+      deal_urgency:
+        type: string
+      quality_priority:
+        type: integer
+      quality_priority_active:
+        type: boolean
+      resale_priority:
+        type: string
+      risk_tolerance:
+        type: integer
+      risk_tolerance_active:
+        type: boolean
+      use_frequency:
+        type: string
+    type: object
+  domain.PriceRange:
+    properties:
+      max:
+        type: number
+      min:
+        type: number
+    type: object
+  domain.RankedOption:
+    properties:
+      avg_price:
+        type: number
+      condition:
+        type: string
+      justification:
+        type: string
+      price_range:
+        $ref: '#/definitions/domain.PriceRange'
+      rank:
+        type: integer
+      savings_vs_new:
+        $ref: '#/definitions/domain.SavingsInfo'
+    type: object
+  domain.RecommendationResponse:
+    properties:
+      confidence_score:
+        type: string
+      exception_message:
+        type: string
+      market_stats:
+        $ref: '#/definitions/domain.MarketStats'
+      new_product_exception:
+        type: boolean
+      product_description:
+        type: string
+      product_name:
+        type: string
+      reasoning:
+        type: string
+      recommendations:
+        items:
+          $ref: '#/definitions/domain.RankedOption'
+        type: array
+      success:
+        type: boolean
+      timestamp:
+        type: string
+    type: object
+  domain.SavingsInfo:
+    properties:
+      absolute:
+        type: number
+      percent:
+        type: number
+    type: object
+  history.HistoryItem:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      preferences:
+        $ref: '#/definitions/domain.Preferences'
+      product_name:
+        type: string
+      recommendation:
+        $ref: '#/definitions/domain.RecommendationResponse'
+    type: object
+  history.SaveRequest:
+    properties:
+      preferences:
+        $ref: '#/definitions/domain.Preferences'
+      product_name:
+        type: string
+      recommendation:
+        $ref: '#/definitions/domain.RecommendationResponse'
+    required:
+    - product_name
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: SecondSense
+  description: Buy new vs used recommendation engine. Analyses product condition tiers
+    with real-time price data and user preferences to recommend the optimal purchase
+    strategy.
+  title: SecondSense API
+  version: "1.0"
+paths:
+  /api/history:
+    get:
+      description: Returns the authenticated user's last 20 searches, newest first
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/history.HistoryItem'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get search history
+      tags:
+      - history
+    post:
+      consumes:
+      - application/json
+      description: Saves a completed recommendation to the authenticated user's history
+      parameters:
+      - description: Search to save
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/history.SaveRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Save search to history
+      tags:
+      - history
+  /health:
+    get:
+      description: Returns ok when the server is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - system
+securityDefinitions:
+  BearerAuth:
+    description: Bearer token from Supabase Auth (required for /api/history endpoints
+      only)
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

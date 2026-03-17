@@ -1,5 +1,43 @@
 import { API_URL } from '@/lib/constants';
-import type { Preferences, RecommendationRequest, RecommendationResult } from '@/lib/types';
+import type { Preferences, RecommendationRequest, RecommendationResult, RecommendationResponse } from '@/lib/types';
+
+export interface HistoryItem {
+  id: string;
+  product_name: string;
+  preferences: Preferences;
+  recommendation: RecommendationResponse;
+  created_at: string;
+}
+
+/**
+ * Save a recommendation to the user's history (fire-and-forget friendly).
+ */
+export async function saveHistory(
+  productName: string,
+  preferences: Preferences,
+  recommendation: RecommendationResponse,
+  accessToken: string
+): Promise<void> {
+  await fetch(`${API_URL}/api/history`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ product_name: productName, preferences, recommendation }),
+  });
+}
+
+/**
+ * Fetch the authenticated user's search history.
+ */
+export async function getHistory(accessToken: string): Promise<HistoryItem[]> {
+  const response = await fetch(`${API_URL}/api/history`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) throw await handleAPIError(response);
+  return response.json();
+}
 
 /**
  * Get recommendation from backend API.
