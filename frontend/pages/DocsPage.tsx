@@ -39,10 +39,11 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
         <section className="space-y-4">
           <H2>How It Works</H2>
           <ol className="space-y-3 list-decimal list-inside">
-            <li><P className="inline">Search for a product by name.</P></li>
+            <li><P className="inline">Search for a product by name — recently searched products appear at the top of suggestions.</P></li>
             <li><P className="inline">Tune your preferences — budget sensitivity, quality expectations, urgency, and more.</P></li>
             <li><P className="inline">SecondSense analyses current market prices across all condition tiers.</P></li>
             <li><P className="inline">You receive a ranked recommendation with reasoning and a savings breakdown.</P></li>
+            <li><P className="inline">Sign in to save your searches and re-run any past recommendation in one tap.</P></li>
           </ol>
         </section>
 
@@ -117,7 +118,11 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
             </div>
             <div>
               <H3>How current are the prices?</H3>
-              <P>Prices are fetched in real time from live marketplace listings each time you run a recommendation.</P>
+              <P>
+                Prices are sourced from live marketplace listings. Results are cached for up to 14 days
+                — if a cached result is shown, you'll see a <strong>"Prices sourced Xd ago"</strong> banner
+                with a <strong>Refresh</strong> button to fetch fresh data on demand.
+              </P>
             </div>
             <div>
               <H3>What products are supported?</H3>
@@ -126,6 +131,48 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
             <div>
               <H3>How is my recommendation calculated?</H3>
               <P>SecondSense weighs your six preference dimensions against current market price data across all condition tiers to produce a ranked recommendation with confidence scoring.</P>
+            </div>
+          </div>
+        </section>
+
+        <Separator />
+
+        {/* Features */}
+        <section className="space-y-4">
+          <H2>Features</H2>
+          <div className="space-y-4">
+            <div>
+              <H3>Gets Faster With Use</H3>
+              <P>
+                SecondSense maintains a shared price cache. Once a product has been searched by anyone,
+                subsequent searches for the same product with the same preferences return instantly —
+                no AI call needed. The app genuinely gets faster the more it is used.
+                Results older than 14 days are automatically refreshed to keep prices current.
+                If you want live prices right now, hit the <strong>Refresh</strong> button on any cached result.
+              </P>
+            </div>
+            <div>
+              <H3>Search History</H3>
+              <P>
+                Sign in to keep a personal record of every recommendation you've run. Your history
+                loads 10 entries at a time — tap <strong>Load more</strong> to page through older searches.
+                Each card shows the top recommendation at a glance so you can spot patterns across your searches.
+              </P>
+            </div>
+            <div>
+              <H3>Extra Context</H3>
+              <P>
+                On the preferences screen, there's a free-text box where you can tell the AI anything
+                relevant that the sliders can't capture — your shoe size, your PC's specs, how you plan
+                to use the item, budget constraints in a specific currency, or anything else. The more
+                context you give, the more tailored your recommendation will be.
+              </P>
+            </div>
+            <div>
+              <H3>Keyboard Shortcut</H3>
+              <P>
+                Press <strong>Ctrl+Shift+R</strong> at any time to do a clean reset back to the home page.
+              </P>
             </div>
           </div>
         </section>

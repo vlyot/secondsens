@@ -8,7 +8,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
-import { History, User as UserIcon, LogIn } from 'lucide-react';
+import { History, House, User as UserIcon, LogIn } from 'lucide-react';
 
 type FlowStep = 'search' | 'preferences' | 'results';
 
@@ -26,6 +26,7 @@ interface FlowBreadcrumbsProps {
   onGoToHistory?: () => void;
   onGoToProfile?: () => void;
   onGoToAuth?: () => void;
+  onGoToLanding?: () => void;
 }
 
 export function FlowBreadcrumbs({
@@ -36,6 +37,7 @@ export function FlowBreadcrumbs({
   onGoToHistory,
   onGoToProfile,
   onGoToAuth,
+  onGoToLanding,
 }: FlowBreadcrumbsProps) {
   const currentIndex = STEPS.findIndex((s) => s.key === currentStep);
 
@@ -80,6 +82,11 @@ export function FlowBreadcrumbs({
       </Breadcrumb>
 
       <div className="flex items-center gap-1">
+        {onGoToLanding && (
+          <Button variant="ghost" size="sm" onClick={onGoToLanding} aria-label="Home" title="Home">
+            <House className="h-3.5 w-3.5" />
+          </Button>
+        )}
         {user ? (
           <>
             <Button variant="ghost" size="sm" onClick={onGoToHistory} aria-label="History" title="Search history">

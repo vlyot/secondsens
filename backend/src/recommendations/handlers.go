@@ -2,8 +2,12 @@ package recommendations
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"log"
+	"sort"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +24,7 @@ func HandleRecommendation(
 	priceSvc *prices.PriceService,
 	recSvc *RecommendationService,
 	recCache *shared.Cache,
+	supabaseClient *shared.SupabaseClient,
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		req, err := parseRequest(c)
@@ -33,6 +38,7 @@ func HandleRecommendation(
 		}
 
 		ctx := c.Request.Context()
+		forceRefresh := c.Query("force_refresh") == "true"
 
 		// Step 1: Resolve canonical product name.
 		canonicalName, disambig, httpStatus, apiErr := resolveProduct(ctx, req.Item, productSvc)
@@ -45,31 +51,83 @@ func HandleRecommendation(
 			return
 		}
 
-		// Step 2: Check recommendation cache.
-		cacheKey := buildCacheKey(canonicalName, &req.Preferences)
-		if cached, ok := recCache.Get(cacheKey); ok {
-			c.JSON(200, cached)
-			return
+		// Step 2: Check in-memory cache (fast path, skip on force_refresh).
+		memCacheKey := buildCacheKey(canonicalName, &req.Preferences)
+		if !forceRefresh {
+			if cached, ok := recCache.Get(memCacheKey); ok {
+				c.JSON(200, cached)
+				return
+			}
 		}
 
-		// Step 3: Fetch prices.
+		// Step 3: Check Supabase shared cache (skip on force_refresh).
+		prefsHash := buildPrefsHash(&req.Preferences)
+		if !forceRefresh && supabaseClient != nil {
+			if supabaseCached, fetchedAt, err := supabaseClient.GetCachedRecommendation(canonicalName, prefsHash); err != nil {
+				log.Printf("supabase cache lookup failed (skipping): %v", err)
+			} else if supabaseCached != nil {
+				// Store clean copy in mem-cache (no Cached flag), serve decorated copy.
+				recCache.Set(memCacheKey, supabaseCached)
+				resp := *supabaseCached
+				resp.Cached = true
+				resp.CachedAt = fetchedAt
+				c.JSON(200, &resp)
+				return
+			}
+		}
+
+		// Step 4: Fetch prices.
 		priceData, err := priceSvc.FetchPrices(ctx, canonicalName)
 		if err != nil {
 			c.JSON(502, gin.H{"error": fmt.Sprintf("Failed to fetch prices: %v", err)})
 			return
 		}
 
-		// Step 4: Generate recommendation.
+		// Step 5: Generate recommendation.
 		response, err := recSvc.Generate(ctx, canonicalName, priceData, &req.Preferences)
 		if err != nil {
 			c.JSON(502, gin.H{"error": fmt.Sprintf("Failed to generate recommendation: %v", err)})
 			return
 		}
 
-		// Step 5: Cache and return.
-		recCache.Set(cacheKey, response)
+		// Step 6: Persist to Supabase cache and in-memory cache, then return.
+		recCache.Set(memCacheKey, response)
+		if supabaseClient != nil {
+			go func() {
+				if err := supabaseClient.UpsertCachedRecommendation(canonicalName, prefsHash, response); err != nil {
+					log.Printf("supabase cache upsert failed: %v", err)
+				}
+			}()
+		}
 		c.JSON(200, response)
 	}
+}
+
+// buildPrefsHash returns a SHA-256 hex digest of the preferences struct
+// serialised as canonical JSON (keys sorted alphabetically).
+func buildPrefsHash(prefs *domain.Preferences) string {
+	// Marshal to a map so we can sort keys deterministically.
+	raw, _ := json.Marshal(prefs)
+	var m map[string]any
+	_ = json.Unmarshal(raw, &m)
+
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	type kv struct {
+		K string
+		V any
+	}
+	ordered := make([]kv, 0, len(keys))
+	for _, k := range keys {
+		ordered = append(ordered, kv{k, m[k]})
+	}
+	canonical, _ := json.Marshal(ordered)
+	sum := sha256.Sum256(canonical)
+	return fmt.Sprintf("%x", sum)
 }
 
 // resolveProduct returns (canonicalName, disambigMatches, httpStatusOnError, errorMessage).

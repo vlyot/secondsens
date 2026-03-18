@@ -48,6 +48,7 @@ interface AppState {
   preferences: Preferences;
   recommendation: RecommendationResponse | null;
   isLoading: boolean;
+  isRefreshing: boolean;
   error: string | null;
   disambiguation: Product[] | null;
 }
@@ -62,6 +63,7 @@ function AppInner() {
     preferences: DEFAULT_PREFERENCES,
     recommendation: null,
     isLoading: false,
+    isRefreshing: false,
     error: null,
     disambiguation: null,
   });
@@ -92,6 +94,18 @@ function AppInner() {
         const message = err instanceof Error ? err.message : 'Something went wrong.';
         setState((prev) => ({ ...prev, currentStep: 'error', error: message, isLoading: false }));
       });
+  }, []);
+
+  // Ctrl+Shift+R — clean reset to landing page (prevents browser hard-reload)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+        e.preventDefault();
+        window.location.href = window.location.pathname;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleGetStarted = () => setState((prev) => ({ ...prev, currentStep: 'search' }));
@@ -180,6 +194,23 @@ function AppInner() {
       currentStep: 'search',
       disambiguation: null,
     }));
+  };
+
+  const handleRefresh = async () => {
+    const query = state.selectedProduct?.canonical_name ?? state.searchQuery;
+    if (!query) return;
+    setState((prev) => ({ ...prev, isRefreshing: true }));
+    try {
+      const result = await getRecommendation(query, state.preferences, true);
+      if ('status' in result && result.status === 'AMBIGUOUS') return;
+      const rec = result as RecommendationResponse;
+      setState((prev) => ({ ...prev, recommendation: rec, isRefreshing: false }));
+      if (session?.access_token) {
+        saveHistory(query, state.preferences, rec, session.access_token).catch(() => {});
+      }
+    } catch {
+      setState((prev) => ({ ...prev, isRefreshing: false }));
+    }
   };
 
   const handleFindListings = (_condition: string, productName: string) => {
@@ -278,6 +309,7 @@ function AppInner() {
                     onGoToHistory={handleGoToHistory}
                     onGoToProfile={handleGoToProfile}
                     onGoToAuth={handleGoToAuth}
+                    onGoToLanding={() => setState((prev) => ({ ...prev, currentStep: 'landing' }))}
                   />
                 )}
 
@@ -297,6 +329,8 @@ function AppInner() {
                     recommendation={state.recommendation}
                     onFindListings={handleFindListings}
                     onNewSearch={handleNewSearch}
+                    onRefresh={handleRefresh}
+                    isRefreshing={state.isRefreshing}
                   />
                 )}
 
@@ -316,6 +350,7 @@ function AppInner() {
                   <HistoryPage
                     onRerun={handleRerunHistory}
                     onBack={() => setState((prev) => ({ ...prev, currentStep: 'search' }))}
+                    onGoToLanding={() => setState((prev) => ({ ...prev, currentStep: 'landing' }))}
                   />
                 )}
 

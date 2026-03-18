@@ -33,6 +33,8 @@ export interface RecommendationResponse {
   new_product_exception?: boolean;
   exception_message?: string;
   estimated_prices?: EstimatedTierPrice[];
+  cached?: boolean;
+  cached_at?: string;
 }
 
 export interface EstimatedTierPrice {

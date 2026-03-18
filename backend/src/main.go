@@ -59,15 +59,21 @@ func main() {
 	router := gin.Default()
 	router.Use(corsMiddleware())
 
+	// Initialise Supabase client (optional — nil disables cache + history)
+	var supabaseClient *shared.SupabaseClient
+	if cfg.SupabaseURL != "" && cfg.SupabaseServiceRoleKey != "" {
+		supabaseClient = shared.NewSupabaseClient(cfg.SupabaseURL, cfg.SupabaseServiceRoleKey)
+	}
+
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	router.GET("/health", healthHandler)
 	router.GET("/api/products", products.HandleProductList(productService))
+	router.GET("/api/products/popular", products.HandlePopularProducts(supabaseClient))
 	router.GET("/api/products/search", products.HandleProductSearch(productService))
-	router.POST("/api/recommend", recommendations.HandleRecommendation(productService, priceService, recService, recCache))
+	router.POST("/api/recommend", recommendations.HandleRecommendation(productService, priceService, recService, recCache, supabaseClient))
 
 	// History routes — require a valid Supabase JWT (JWKS-based, no secret needed)
-	if cfg.SupabaseURL != "" && cfg.SupabaseServiceRoleKey != "" {
-		supabaseClient := shared.NewSupabaseClient(cfg.SupabaseURL, cfg.SupabaseServiceRoleKey)
+	if supabaseClient != nil {
 		authMiddleware, err := shared.NewAuthMiddleware(cfg.SupabaseURL)
 		if err != nil {
 			log.Fatalf("Failed to initialise auth middleware: %v", err)

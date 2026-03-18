@@ -1,5 +1,7 @@
 package domain
 
+import "time"
+
 // RecommendationRequest is the incoming request from the frontend.
 type RecommendationRequest struct {
 	Item        string      `json:"item"`
@@ -32,6 +34,8 @@ type RecommendationResponse struct {
 	Timestamp            string         `json:"timestamp"`
 	NewProductException  bool           `json:"new_product_exception,omitempty"`
 	ExceptionMessage     string         `json:"exception_message,omitempty"`
+	Cached               bool           `json:"cached,omitempty"`
+	CachedAt             *time.Time     `json:"cached_at,omitempty"`
 }
 
 // RankedOption represents a single ranked recommendation.

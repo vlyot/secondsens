@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { API_URL } from '@/lib/constants';
+import { getPopularProducts } from '@/services/api';
 
 export function SearchBar({
   onSearch,
@@ -17,15 +19,19 @@ export function SearchBar({
 }) {
   const [query, setQuery] = useState('');
   const [catalog, setCatalog] = useState<string[]>([]);
+  const [popularNames, setPopularNames] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/products`)
-      .then((r) => r.json())
-      .then((data: string[]) => setCatalog(data))
-      .catch(() => {/* silent fallback to plain text input */});
+    Promise.all([
+      fetch(`${API_URL}/api/products`).then((r) => r.json()).catch(() => [] as string[]),
+      getPopularProducts(),
+    ]).then(([catalogData, popularData]) => {
+      setCatalog(catalogData as string[]);
+      setPopularNames(popularData);
+    });
   }, []);
 
   useEffect(() => {
@@ -38,8 +44,24 @@ export function SearchBar({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const suggestions = query.trim().length >= 2
-    ? catalog.filter((name) => name.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
+  const suggestions: Array<{ name: string; popular: boolean }> = query.trim().length >= 2
+    ? (() => {
+        const q = query.toLowerCase();
+        const seen = new Set<string>();
+        const results: Array<{ name: string; popular: boolean }> = [];
+        for (const name of popularNames) {
+          if (name.toLowerCase().includes(q)) {
+            seen.add(name);
+            results.push({ name, popular: true });
+          }
+        }
+        for (const name of catalog) {
+          if (!seen.has(name) && name.toLowerCase().includes(q)) {
+            results.push({ name, popular: false });
+          }
+        }
+        return results.slice(0, 8);
+      })()
     : [];
 
   const validateQuery = (q: string): boolean => {
@@ -76,7 +98,7 @@ export function SearchBar({
             disabled={isLoading}
             aria-label="Product search"
             aria-autocomplete="list"
-            aria-expanded={showSuggestions && suggestions.length > 0}
+            aria-expanded={showSuggestions && suggestions.length > 0 ? true : undefined}
             className="flex-1 transition-all duration-200 focus-visible:scale-[1.01]"
             autoComplete="off"
           />
@@ -102,7 +124,7 @@ export function SearchBar({
             <CommandList>
               <CommandEmpty>No matches</CommandEmpty>
               <CommandGroup>
-                {suggestions.map((name) => (
+                {suggestions.map(({ name, popular }) => (
                   <CommandItem
                     key={name}
                     value={name}
@@ -111,7 +133,10 @@ export function SearchBar({
                       submit(value);
                     }}
                   >
-                    {name}
+                    <span className="flex items-center gap-2 w-full">
+                      {popular && <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                      <span>{name}</span>
+                    </span>
                   </CommandItem>
                 ))}
               </CommandGroup>

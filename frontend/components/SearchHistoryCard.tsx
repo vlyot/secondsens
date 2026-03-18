@@ -8,10 +8,9 @@ import type { HistoryItem } from '@/services/api';
 function getVerdict(item: HistoryItem): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } {
   const top = item.recommendation?.recommendations?.[0];
   if (!top) return { label: 'Unknown', variant: 'secondary' };
-  const condition = top.condition?.toLowerCase() ?? '';
-  if (condition.includes('new')) return { label: 'Buy New', variant: 'default' };
-  if (condition.includes('like')) return { label: 'Buy Like New', variant: 'default' };
-  return { label: 'Buy Used', variant: 'secondary' };
+  const condition = top.condition ?? '';
+  if (condition === 'Brand New') return { label: 'Buy New', variant: 'default' };
+  return { label: `Buy ${condition}`, variant: 'secondary' };
 }
 
 function formatDate(iso: string): string {

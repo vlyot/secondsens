@@ -2,6 +2,7 @@ package history
 
 import (
 	"encoding/json"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"secondsense/backend/src/shared"
@@ -70,7 +71,16 @@ func HandleList(db *shared.SupabaseClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, _ := c.Get(shared.ContextUserID)
 
-		records, err := db.GetSearches(userID.(string))
+		limit := 10
+		offset := 0
+		if l, err := strconv.Atoi(c.Query("limit")); err == nil && l > 0 {
+			limit = l
+		}
+		if o, err := strconv.Atoi(c.Query("offset")); err == nil && o >= 0 {
+			offset = o
+		}
+
+		records, err := db.GetSearches(userID.(string), limit, offset)
 		if err != nil {
 			c.JSON(502, gin.H{"error": "failed to fetch history"})
 			return

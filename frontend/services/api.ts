@@ -29,10 +29,10 @@ export async function saveHistory(
 }
 
 /**
- * Fetch the authenticated user's search history.
+ * Fetch the authenticated user's search history with pagination.
  */
-export async function getHistory(accessToken: string): Promise<HistoryItem[]> {
-  const response = await fetch(`${API_URL}/api/history`, {
+export async function getHistory(accessToken: string, limit = 10, offset = 0): Promise<HistoryItem[]> {
+  const response = await fetch(`${API_URL}/api/history?limit=${limit}&offset=${offset}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!response.ok) throw await handleAPIError(response);
@@ -43,17 +43,22 @@ export async function getHistory(accessToken: string): Promise<HistoryItem[]> {
  * Get recommendation from backend API.
  * Returns either a full RecommendationResponse or an AmbiguousResponse
  * when the query matches multiple products.
+ * Pass forceRefresh=true to bypass the shared Supabase cache.
  */
 export async function getRecommendation(
   item: string,
-  preferences: Preferences
+  preferences: Preferences,
+  forceRefresh = false
 ): Promise<RecommendationResult> {
   const request: RecommendationRequest = { item, preferences };
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 60_000);
+  const endpoint = forceRefresh
+    ? `${API_URL}/api/recommend?force_refresh=true`
+    : `${API_URL}/api/recommend`;
 
   try {
-    const response = await fetch(`${API_URL}/api/recommend`, {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
@@ -72,6 +77,20 @@ export async function getRecommendation(
     throw err;
   } finally {
     clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Fetch recently-searched product names from the shared cache (last 30 days).
+ * Returns an empty array silently on failure.
+ */
+export async function getPopularProducts(): Promise<string[]> {
+  try {
+    const response = await fetch(`${API_URL}/api/products/popular`);
+    if (!response.ok) return [];
+    return response.json();
+  } catch {
+    return [];
   }
 }
 

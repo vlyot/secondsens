@@ -14,84 +14,14 @@
 
 ## Phase 4 — Long Term Features
 
-### 4.1 User Profiles & Personal History
-
-**Goal:** Let returning users see their past searches and re-run them without re-entering preferences.
-
-**Infrastructure:** Supabase free tier (already connected via MCP)
-
-**Database schema:**
-```
-users         — managed by Supabase Auth (email/OAuth)
-user_searches — id, user_id (fk), product_name, preferences (jsonb), recommendation (jsonb), created_at
-```
-
-**Backend changes (`backend/src/`):**
-- Add Supabase client initialisation using `SUPABASE_URL` + `SUPABASE_ANON_KEY` env vars
-- Add JWT validation middleware that reads the Supabase auth token from `Authorization: Bearer` header
-- New routes:
-  - `POST /api/history` — saves a recommendation (called after successful `/api/recommend`)
-  - `GET /api/history` — returns the authenticated user's last 20 searches, newest first
-
-**Frontend changes:**
-- Add Supabase JS client (`@supabase/supabase-js`) to the frontend
-- Auth flow: email magic link or Google OAuth (Supabase handles this out of the box)
-- New `HistoryPage.tsx`: grid of past search cards, each showing product name, date, and verdict badge
-- Clicking a history card re-runs the recommendation with the saved preferences
-- Auth state stored in React context, token passed with every API request
-- NavBar "History" link becomes active once auth is wired up
+### 4.1 User Profiles & Personal History ✅
 
 ---
 
-### 4.2 Shared Cross-User Search Cache
+### 4.2 Shared Cross-User Search Cache ✅
 
-**Goal:** If User A searches "Logitech G Pro X" with a given set of preferences, and User B searches the same within 2 weeks, return the cached result instantly — 0 LLM calls.
-
-**Infrastructure:** Supabase (same project as 4.1, or standalone if auth not yet done)
-
-**Database schema:**
-```
-search_cache — id, product_name (text), preferences_hash (text), recommendation (jsonb), fetched_at (timestamptz)
-  UNIQUE constraint on (product_name, preferences_hash)
-```
-
-**How the hash works:**
-- On the backend, deterministically serialize the `Preferences` struct to a canonical JSON string (sorted keys), then SHA-256 hash it
-- This ensures that two users with identical slider values produce identical cache keys
-
-**Request flow:**
-1. Receive `/api/recommend` request
-2. Compute `preferences_hash`
-3. Query Supabase: `SELECT * FROM search_cache WHERE product_name = $1 AND preferences_hash = $2 AND fetched_at > NOW() - INTERVAL '14 days'`
-4. **Cache hit** → return `recommendation` JSON directly, add `"cached": true, "cached_at": "<date>"` to response
-5. **Cache miss** → run full Gemini pipeline → upsert result into `search_cache` → return to user
-
-**TTL strategy:**
-- Default TTL: **14 days** (electronics prices shift faster than furniture)
-- Future enhancement: per-category TTL based on product type tag
-
-**Frontend changes:**
-- Results page shows a subtle "Prices sourced X days ago · Refresh" label when `cached: true`
-- "Refresh" button forces a cache-bypass by passing `?force_refresh=true` to the API
-- No auth required — cache benefits all users anonymously
-
-**Fallback:** If Supabase is unreachable, skip cache check entirely and run live. Log the miss for monitoring.
 
 #### 4.2.1 Cache-Backed Smart Search Suggestions
-
-**Goal:** Surface popular/recently-searched product names as autocomplete suggestions, sourced from the shared `search_cache` table — making suggestions smarter over time without any extra infrastructure.
-
-**Backend:**
-- Add `GET /api/products/popular` route that queries Supabase for distinct `product_name` values from `search_cache` where `fetched_at > NOW() - INTERVAL '30 days'`, ordered by recency, capped at 50 results
-- No schema changes needed — reads directly from the existing `search_cache` table
-
-**Frontend (`SearchBar`):**
-- On mount, fetch both `/api/products` (static catalog) and `/api/products/popular` (cache-sourced) in parallel
-- Merge results: cache-sourced names first, then static catalog, deduped
-- Cache-sourced suggestions show a small clock icon or "popular" indicator so users know these are real searches others have run
-- Falls back silently to catalog-only if the popular endpoint is unreachable
-
-**Why it matters:** Surfaces dynamic products (not in the YAML catalog) that real users have successfully searched before. Self-improving — more usage = smarter suggestions. Zero additional Gemini cost.
 
 ---
 
@@ -123,6 +53,7 @@ search_cache — id, product_name (text), preferences_hash (text), recommendatio
 - When a product is confirmed, the backend fetches the first Google Shopping result URL for the product
 - Extracts the `og:image` meta tag from the HTML response
 - Returns the image URL alongside the product data
+- cache images in the db, can fuzzy search images, meaning the name doesnt have to be 1:1 to show the image, i will accept some level of inaccuracy here.
 
 **Alternative — Google Custom Search JSON API (free: 100 queries/day):**
 - More reliable but has a daily cap
@@ -160,7 +91,9 @@ search_cache — id, product_name (text), preferences_hash (text), recommendatio
 - On mobile, dual column stacks vertically
 
 ---
+### 5 Final changes
 
+---
 ## Staying Free — Full Cost Table
 
 | Service | Usage | Free Tier Limit | Risk |
