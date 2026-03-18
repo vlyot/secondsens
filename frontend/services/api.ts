@@ -45,6 +45,22 @@ export async function getHistory(accessToken: string, limit = 10, offset = 0): P
  * when the query matches multiple products.
  * Pass forceRefresh=true to bypass the shared Supabase cache.
  */
+/**
+ * Derive a 2-letter ISO country code from the browser's navigator.language.
+ * e.g. "en-SG" → "SG", "en-US" → "US", "de" → "DE".
+ * Returns empty string when detection is unavailable.
+ */
+function detectCountryCode(): string {
+  try {
+    const lang = navigator.language ?? '';
+    const parts = lang.split('-');
+    if (parts.length >= 2) return parts[parts.length - 1].toUpperCase();
+    return parts[0].toUpperCase();
+  } catch {
+    return '';
+  }
+}
+
 export async function getRecommendation(
   item: string,
   preferences: Preferences,
@@ -57,10 +73,15 @@ export async function getRecommendation(
     ? `${API_URL}/api/recommend?force_refresh=true`
     : `${API_URL}/api/recommend`;
 
+  const countryCode = detectCountryCode();
+
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(countryCode ? { 'X-Country': countryCode } : {}),
+      },
       body: JSON.stringify(request),
       signal: controller.signal,
     });

@@ -91,8 +91,10 @@
 - On mobile, dual column stacks vertically
 
 ---
-### 5 Final changes
-
+### 5 - Getting ready for release to public
+- suggest final features to polish and optimize the app
+- give instructions on how to prepare env and secrets
+- will host on vercel
 ---
 ## Staying Free — Full Cost Table
 

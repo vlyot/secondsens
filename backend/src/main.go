@@ -53,7 +53,14 @@ func main() {
 
 	// Wire services
 	productService := products.NewProductService(repo, llmClient, validationCache)
-	priceService := prices.NewPriceService(llmClient)
+	var ebayClient *prices.EbayClient
+	if cfg.EbayAppID != "" {
+		ebayClient = prices.NewEbayClient(cfg.EbayAppID)
+		log.Println("eBay Browse API enabled")
+	} else {
+		log.Println("eBay Browse API disabled (EBAY_APP_ID not set) — using Gemini for prices")
+	}
+	priceService := prices.NewPriceService(llmClient, ebayClient)
 	recService := recommendations.NewRecommendationService(llmClient)
 
 	router := gin.Default()
@@ -97,7 +104,7 @@ func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Country")
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return

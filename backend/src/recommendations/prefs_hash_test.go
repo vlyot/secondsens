@@ -15,8 +15,8 @@ func TestBuildPrefsHash_Deterministic(t *testing.T) {
 		DealUrgency:       "soon",
 		ResalePriority:    "keeping",
 	}
-	h1 := buildPrefsHash(prefs)
-	h2 := buildPrefsHash(prefs)
+	h1 := buildPrefsHash(prefs, "US")
+	h2 := buildPrefsHash(prefs, "US")
 	if h1 != h2 {
 		t.Errorf("hash not deterministic: %s != %s", h1, h2)
 	}
@@ -39,7 +39,7 @@ func TestBuildPrefsHash_DifferentPrefsProduceDifferentHashes(t *testing.T) {
 		DealUrgency:       "soon",
 		ResalePriority:    "keeping",
 	}
-	if buildPrefsHash(base) == buildPrefsHash(other) {
+	if buildPrefsHash(base, "US") == buildPrefsHash(other, "US") {
 		t.Error("different preferences should produce different hashes")
 	}
 }
@@ -67,8 +67,8 @@ func TestBuildPrefsHash_IgnoresContextField(t *testing.T) {
 	}
 	// Context IS included in the struct — this test documents the current behaviour.
 	// If they differ it means context changes the hash (by design).
-	h1 := buildPrefsHash(withoutCtx)
-	h2 := buildPrefsHash(withCtx)
+	h1 := buildPrefsHash(withoutCtx, "US")
+	h2 := buildPrefsHash(withCtx, "US")
 	_ = h1
 	_ = h2
 	// No assertion — just ensure no panic. Behaviour is intentional.
@@ -83,7 +83,7 @@ func TestBuildPrefsHash_Format(t *testing.T) {
 		DealUrgency:       "need_it_now",
 		ResalePriority:    "definitely_reselling",
 	}
-	h := buildPrefsHash(prefs)
+	h := buildPrefsHash(prefs, "US")
 	if len(h) != 64 {
 		t.Errorf("expected 64-char hex SHA-256, got len=%d: %s", len(h), h)
 	}

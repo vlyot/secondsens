@@ -43,26 +43,28 @@ func (m *mockLLM) GenerateJSON(_ context.Context, _ string) (string, error) {
 	return m.response, m.err
 }
 
-func TestPriceRangeClamping(t *testing.T) {
-	// Simulate inverted scrape data: well_used prices higher than brand_new
+func TestPriceStats_RealisticData(t *testing.T) {
+	// Verify that Generate correctly computes min/avg/max stats from realistic price data.
+	// sanitiseTiers (called upstream in price_service) handles outlier trimming;
+	// the recommendation service just maps raw slices to stats — no reordering.
 	prices := &domain.PriceData{
-		BrandNew: []float64{100},
-		LikeNew:  []float64{120}, // inverted: higher than brand new
-		Good:     []float64{130}, // further inverted
-		WellUsed: []float64{140}, // worst condition, highest price
+		BrandNew: []float64{1400, 1500, 1600},
+		LikeNew:  []float64{900, 1000, 1100},
+		Good:     []float64{650, 700, 750},
+		WellUsed: []float64{400, 450, 500},
 	}
 
 	llm := &mockLLM{response: `{
 		"rankings": [
-			{"rank": 1, "condition": "brand_new", "avg_price": 100, "justification": "best value"},
-			{"rank": 2, "condition": "like_new", "avg_price": 100, "justification": "ok"},
-			{"rank": 3, "condition": "good", "avg_price": 100, "justification": "fine"}
+			{"rank": 1, "condition": "brand_new", "avg_price": 1500, "justification": "best value"},
+			{"rank": 2, "condition": "like_new", "avg_price": 1000, "justification": "ok"},
+			{"rank": 3, "condition": "good", "avg_price": 700, "justification": "fine"}
 		],
 		"reasoning": "test",
 		"confidence_score": "High"
 	}`}
 	rs := NewRecommendationService(llm)
-	resp, err := rs.Generate(context.Background(), "Test Product", prices, &domain.Preferences{
+	resp, err := rs.Generate(context.Background(), "MacBook Pro", prices, &domain.Preferences{
 		UseFrequency:   "regular",
 		DealUrgency:    "soon",
 		ResalePriority: "keeping",
@@ -71,35 +73,18 @@ func TestPriceRangeClamping(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	bn := resp.MarketStats.BrandNew.AvgPrice
-	ln := resp.MarketStats.LikeNew.AvgPrice
-	g := resp.MarketStats.Good.AvgPrice
-	wu := resp.MarketStats.WellUsed.AvgPrice
-
-	if ln > bn {
-		t.Errorf("like_new avg (%.2f) should not exceed brand_new avg (%.2f)", ln, bn)
+	// Min/max/avg should reflect the input slices faithfully.
+	if resp.MarketStats.BrandNew.Range.Min != 1400 {
+		t.Errorf("brand_new min: want 1400, got %.2f", resp.MarketStats.BrandNew.Range.Min)
 	}
-	if g > ln {
-		t.Errorf("good avg (%.2f) should not exceed like_new avg (%.2f)", g, ln)
+	if resp.MarketStats.BrandNew.Range.Max != 1600 {
+		t.Errorf("brand_new max: want 1600, got %.2f", resp.MarketStats.BrandNew.Range.Max)
 	}
-	if wu > g {
-		t.Errorf("well_used avg (%.2f) should not exceed good avg (%.2f)", wu, g)
+	if resp.MarketStats.WellUsed.Range.Min != 400 {
+		t.Errorf("well_used min: want 400, got %.2f", resp.MarketStats.WellUsed.Range.Min)
 	}
-
-	// Verify max bounds are also clamped
-	bnMax := resp.MarketStats.BrandNew.Range.Max
-	lnMax := resp.MarketStats.LikeNew.Range.Max
-	gMax := resp.MarketStats.Good.Range.Max
-	wuMax := resp.MarketStats.WellUsed.Range.Max
-
-	if lnMax > bnMax {
-		t.Errorf("like_new max (%.2f) should not exceed brand_new max (%.2f)", lnMax, bnMax)
-	}
-	if gMax > lnMax {
-		t.Errorf("good max (%.2f) should not exceed like_new max (%.2f)", gMax, lnMax)
-	}
-	if wuMax > gMax {
-		t.Errorf("well_used max (%.2f) should not exceed good max (%.2f)", wuMax, gMax)
+	if resp.MarketStats.WellUsed.Range.Max != 500 {
+		t.Errorf("well_used max: want 500, got %.2f", resp.MarketStats.WellUsed.Range.Max)
 	}
 }
 

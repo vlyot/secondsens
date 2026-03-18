@@ -180,12 +180,12 @@ func (s *SupabaseClient) UpsertCachedRecommendation(productName, prefsHash strin
 		return fmt.Errorf("marshal payload: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, s.baseURL+"/rest/v1/search_cache", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, s.baseURL+"/rest/v1/search_cache?on_conflict=product_name,preferences_hash", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("create request: %w", err)
 	}
 	s.setHeaders(req)
-	req.Header.Set("Prefer", "resolution=merge-duplicates,return=minimal,on_conflict=product_name,preferences_hash")
+	req.Header.Set("Prefer", "resolution=merge-duplicates,return=minimal")
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {

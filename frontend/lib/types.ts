@@ -35,6 +35,8 @@ export interface RecommendationResponse {
   estimated_prices?: EstimatedTierPrice[];
   cached?: boolean;
   cached_at?: string;
+  /** Per-tier data origin. "ebay" = live eBay listing data; "ai_estimate" = Gemini estimate. */
+  price_source?: Record<string, 'ebay' | 'ai_estimate'>;
 }
 
 export interface EstimatedTierPrice {

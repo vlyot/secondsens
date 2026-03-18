@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { TriangleAlert } from 'lucide-react';
 import type { RecommendationResponse, RankedOption } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -98,7 +99,7 @@ export function RecommendationDisplay({
       {!data.new_product_exception && (
         <motion.div className="space-y-3" variants={staggerItemVariants}>
           <H3 className="border-0 scroll-m-0">Market Statistics</H3>
-          <PriceBars data={data} prefersReducedMotion={prefersReducedMotion} />
+          <PriceBars data={data} prefersReducedMotion={prefersReducedMotion} priceSource={data.price_source} />
         </motion.div>
       )}
 
@@ -202,9 +203,11 @@ const TIER_COLORS: Record<string, string> = {
 function PriceBars({
   data,
   prefersReducedMotion,
+  priceSource,
 }: {
   data: RecommendationResponse;
   prefersReducedMotion: boolean;
+  priceSource?: Record<string, 'ebay' | 'ai_estimate'>;
 }) {
   const estimatedKeys = new Set((data.estimated_prices ?? []).map((e) => e.condition));
 
@@ -224,6 +227,7 @@ function PriceBars({
         {tiers.map(({ label, stats, key }, index) => {
           const pct = brandNewAvg > 0 ? Math.round((stats.avg_price / brandNewAvg) * 100) : 0;
           const isRecommended = key === recommendedCondition;
+          const source = priceSource?.[key];
           return (
             <motion.div
               key={label}
@@ -233,12 +237,20 @@ function PriceBars({
               transition={{ delay: index * 0.08, duration: 0.35 }}
             >
               <div className="flex justify-between items-baseline">
-                <span className="flex items-center gap-1.5">
+                <span className="flex items-center gap-1.5 flex-wrap">
                   <Small className={isRecommended ? 'font-bold text-foreground' : ''}>
                     {label}{isRecommended ? ' ★' : ''}
                   </Small>
                   {estimatedKeys.has(key) && (
                     <span className="text-xs text-muted-foreground italic">est.</span>
+                  )}
+                  {source && (
+                    <Badge
+                      variant={source === 'ebay' ? 'secondary' : 'outline'}
+                      className={cn('text-[10px] px-1.5 py-0 h-4 leading-none', source === 'ebay' ? '' : 'text-muted-foreground')}
+                    >
+                      {source === 'ebay' ? 'via eBay' : 'via AI estimate'}
+                    </Badge>
                   )}
                 </span>
                 <Muted className="mt-0 text-xs">

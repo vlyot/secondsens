@@ -14,6 +14,7 @@ type Config struct {
 	GeminiModel            string
 	SupabaseURL            string
 	SupabaseServiceRoleKey string
+	EbayAppID              string
 }
 
 // LoadConfig loads configuration from environment variables and .env file.
@@ -26,6 +27,7 @@ func LoadConfig() *Config {
 		GeminiModel:            getEnv("GEMINI_MODEL", "gemini-2.5-flash"),
 		SupabaseURL:            getEnv("SUPABASE_URL", ""),
 		SupabaseServiceRoleKey: getEnv("SUPABASE_SERVICE_ROLE_KEY", ""),
+		EbayAppID:              getEnv("EBAY_APP_ID", ""),
 	}
 }
 

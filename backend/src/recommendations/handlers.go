@@ -40,6 +40,10 @@ func HandleRecommendation(
 		ctx := c.Request.Context()
 		forceRefresh := c.Query("force_refresh") == "true"
 
+		// Extract country code from request header (sent by frontend based on browser locale).
+		// Falls back to empty string which the price service treats as US+GB default.
+		countryCode := strings.ToUpper(strings.TrimSpace(c.GetHeader("X-Country")))
+
 		// Step 1: Resolve canonical product name.
 		canonicalName, disambig, httpStatus, apiErr := resolveProduct(ctx, req.Item, productSvc)
 		if apiErr != "" {
@@ -52,7 +56,7 @@ func HandleRecommendation(
 		}
 
 		// Step 2: Check in-memory cache (fast path, skip on force_refresh).
-		memCacheKey := buildCacheKey(canonicalName, &req.Preferences)
+		memCacheKey := buildCacheKey(canonicalName, &req.Preferences, countryCode)
 		if !forceRefresh {
 			if cached, ok := recCache.Get(memCacheKey); ok {
 				c.JSON(200, cached)
@@ -61,7 +65,7 @@ func HandleRecommendation(
 		}
 
 		// Step 3: Check Supabase shared cache (skip on force_refresh).
-		prefsHash := buildPrefsHash(&req.Preferences)
+		prefsHash := buildPrefsHash(&req.Preferences, countryCode)
 		if !forceRefresh && supabaseClient != nil {
 			if supabaseCached, fetchedAt, err := supabaseClient.GetCachedRecommendation(canonicalName, prefsHash); err != nil {
 				log.Printf("supabase cache lookup failed (skipping): %v", err)
@@ -77,7 +81,7 @@ func HandleRecommendation(
 		}
 
 		// Step 4: Fetch prices.
-		priceData, err := priceSvc.FetchPrices(ctx, canonicalName)
+		priceData, priceSource, err := priceSvc.FetchPrices(ctx, canonicalName, countryCode)
 		if err != nil {
 			c.JSON(502, gin.H{"error": fmt.Sprintf("Failed to fetch prices: %v", err)})
 			return
@@ -89,6 +93,9 @@ func HandleRecommendation(
 			c.JSON(502, gin.H{"error": fmt.Sprintf("Failed to generate recommendation: %v", err)})
 			return
 		}
+
+		// Attach price source map so the frontend can show per-tier data provenance.
+		response.PriceSource = priceSource
 
 		// Step 6: Persist to Supabase cache and in-memory cache, then return.
 		recCache.Set(memCacheKey, response)
@@ -104,8 +111,9 @@ func HandleRecommendation(
 }
 
 // buildPrefsHash returns a SHA-256 hex digest of the preferences struct
-// serialised as canonical JSON (keys sorted alphabetically).
-func buildPrefsHash(prefs *domain.Preferences) string {
+// serialised as canonical JSON (keys sorted alphabetically), scoped by countryCode
+// so users from different regions don't share cached prices.
+func buildPrefsHash(prefs *domain.Preferences, countryCode string) string {
 	// Marshal to a map so we can sort keys deterministically.
 	raw, _ := json.Marshal(prefs)
 	var m map[string]any
@@ -126,7 +134,7 @@ func buildPrefsHash(prefs *domain.Preferences) string {
 		ordered = append(ordered, kv{k, m[k]})
 	}
 	canonical, _ := json.Marshal(ordered)
-	sum := sha256.Sum256(canonical)
+	sum := sha256.Sum256(append(canonical, []byte(":"+countryCode)...))
 	return fmt.Sprintf("%x", sum)
 }
 
@@ -151,10 +159,10 @@ func resolveProduct(ctx context.Context, query string, svc *products.ProductServ
 	return "", nil, 404, "Product not found"
 }
 
-// buildCacheKey creates a deterministic cache key from product name and preferences.
-func buildCacheKey(canonicalName string, prefs *domain.Preferences) string {
+// buildCacheKey creates a deterministic cache key from product name, preferences, and country.
+func buildCacheKey(canonicalName string, prefs *domain.Preferences, countryCode string) string {
 	h := fnv.New32a()
-	h.Write([]byte(fmt.Sprintf("%d:%d:%d:%s:%s:%s", prefs.BudgetFlexibility, prefs.QualityPriority, prefs.RiskTolerance, prefs.UseFrequency, prefs.DealUrgency, prefs.ResalePriority)))
+	h.Write([]byte(fmt.Sprintf("%d:%d:%d:%s:%s:%s:%s", prefs.BudgetFlexibility, prefs.QualityPriority, prefs.RiskTolerance, prefs.UseFrequency, prefs.DealUrgency, prefs.ResalePriority, countryCode)))
 	return fmt.Sprintf("recommendation:%s:%d", strings.ToLower(canonicalName), h.Sum32())
 }
 

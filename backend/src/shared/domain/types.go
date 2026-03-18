@@ -24,18 +24,21 @@ type Preferences struct {
 
 // RecommendationResponse is the complete response with rankings and reasoning.
 type RecommendationResponse struct {
-	Success              bool           `json:"success"`
-	ProductName          string         `json:"product_name"`
-	ProductDescription   string         `json:"product_description,omitempty"`
-	Recommendations      []RankedOption `json:"recommendations"`
-	MarketStats          MarketStats    `json:"market_stats"`
-	Reasoning            string         `json:"reasoning"`
-	ConfidenceScore      string         `json:"confidence_score"`
-	Timestamp            string         `json:"timestamp"`
-	NewProductException  bool           `json:"new_product_exception,omitempty"`
-	ExceptionMessage     string         `json:"exception_message,omitempty"`
-	Cached               bool           `json:"cached,omitempty"`
-	CachedAt             *time.Time     `json:"cached_at,omitempty"`
+	Success              bool              `json:"success"`
+	ProductName          string            `json:"product_name"`
+	ProductDescription   string            `json:"product_description,omitempty"`
+	Recommendations      []RankedOption    `json:"recommendations"`
+	MarketStats          MarketStats       `json:"market_stats"`
+	Reasoning            string            `json:"reasoning"`
+	ConfidenceScore      string            `json:"confidence_score"`
+	Timestamp            string            `json:"timestamp"`
+	NewProductException  bool              `json:"new_product_exception,omitempty"`
+	ExceptionMessage     string            `json:"exception_message,omitempty"`
+	Cached               bool              `json:"cached,omitempty"`
+	CachedAt             *time.Time        `json:"cached_at,omitempty"`
+	// PriceSource indicates the data origin per condition tier.
+	// Values: "ebay" | "ai_estimate". Omitted when empty (legacy cached responses).
+	PriceSource          map[string]string `json:"price_source,omitempty"`
 }
 
 // RankedOption represents a single ranked recommendation.

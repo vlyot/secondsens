@@ -149,8 +149,8 @@ func TestBuildCacheKey_Deterministic(t *testing.T) {
 		DealUrgency:       "soon",
 		ResalePriority:    "maybe",
 	}
-	k1 := buildCacheKey("Logitech G Pro X Superlight", prefs)
-	k2 := buildCacheKey("Logitech G Pro X Superlight", prefs)
+	k1 := buildCacheKey("Logitech G Pro X Superlight", prefs, "US")
+	k2 := buildCacheKey("Logitech G Pro X Superlight", prefs, "US")
 	if k1 != k2 {
 		t.Errorf("cache key is not deterministic: %q vs %q", k1, k2)
 	}
@@ -159,8 +159,8 @@ func TestBuildCacheKey_Deterministic(t *testing.T) {
 func TestBuildCacheKey_DifferentPrefs(t *testing.T) {
 	p1 := &domain.Preferences{BudgetFlexibility: 7, QualityPriority: 5, RiskTolerance: 4, UseFrequency: "regular", DealUrgency: "soon", ResalePriority: "maybe"}
 	p2 := &domain.Preferences{BudgetFlexibility: 3, QualityPriority: 9, RiskTolerance: 1, UseFrequency: "daily_driver", DealUrgency: "need_it_now", ResalePriority: "definitely_reselling"}
-	k1 := buildCacheKey("Product", p1)
-	k2 := buildCacheKey("Product", p2)
+	k1 := buildCacheKey("Product", p1, "US")
+	k2 := buildCacheKey("Product", p2, "US")
 	if k1 == k2 {
 		t.Error("different preferences should produce different cache keys")
 	}
@@ -176,7 +176,7 @@ func TestBuildCacheKey_CacheHit(t *testing.T) {
 		DealUrgency:       "soon",
 		ResalePriority:    "maybe",
 	}
-	key := buildCacheKey("Test Product", prefs)
+	key := buildCacheKey("Test Product", prefs, "US")
 	cache.Set(key, "stored")
 	val, ok := cache.Get(key)
 	if !ok {

@@ -68,15 +68,23 @@ function AppInner() {
     disambiguation: null,
   });
 
-  // Decode ?s= share param on mount and auto-run recommendation
+  // Decode ?s= share param on mount and auto-run recommendation.
+  // sessionStorage guard ensures each share link only auto-runs once per tab session.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const encoded = params.get('s');
     if (!encoded) return;
+    // Clear the URL immediately so refresh doesn't re-run.
+    window.history.replaceState(null, '', window.location.pathname);
+    // Deduplicate within the same tab session (handles React Strict Mode double-invoke).
+    const sessionKey = 's_consumed_' + encoded.slice(0, 16);
+    if (sessionStorage.getItem(sessionKey)) return;
+    sessionStorage.setItem(sessionKey, '1');
     const payload = decodeSharePayload(encoded);
     if (!payload) return;
     setState((prev) => ({
       ...prev,
+      currentStep: 'search',
       searchQuery: payload.product,
       preferences: payload.preferences,
       isLoading: true,
@@ -91,6 +99,7 @@ function AppInner() {
         setState((prev) => ({ ...prev, currentStep: 'results', recommendation: result as RecommendationResponse, isLoading: false }));
       })
       .catch((err) => {
+        window.history.replaceState(null, '', window.location.pathname);
         const message = err instanceof Error ? err.message : 'Something went wrong.';
         setState((prev) => ({ ...prev, currentStep: 'error', error: message, isLoading: false }));
       });
@@ -220,6 +229,8 @@ function AppInner() {
   };
 
   const handleRetry = () => {
+    window.history.replaceState(null, '', window.location.pathname);
+    sessionStorage.clear();
     setState((prev) => ({
       ...prev,
       currentStep: 'search',
