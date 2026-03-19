@@ -46,9 +46,8 @@ export function LandingPage({ onGetStarted, onExplore }: LandingPageProps) {
             >
               <motion.div variants={staggerItemVariants}>
                 <Display className="text-5xl leading-tight tracking-tight text-white md:text-7xl text-balance drop-shadow-2xl">
-                  Find Your Perfect
+                  Should You Buy It New or Used?
                   <br />
-                  Gaming Gear
                 </Display>
               </motion.div>
 
