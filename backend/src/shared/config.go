@@ -17,6 +17,7 @@ type Config struct {
 	EbayAppID              string
 	GoogleSearchAPIKey     string
 	GoogleSearchCX         string
+	CORSAllowedOrigins     string
 }
 
 // LoadConfig loads configuration from environment variables and .env file.
@@ -32,6 +33,7 @@ func LoadConfig() *Config {
 		EbayAppID:              getEnv("EBAY_APP_ID", ""),
 		GoogleSearchAPIKey:     getEnv("GOOGLE_SEARCH_API_KEY", ""),
 		GoogleSearchCX:         getEnv("GOOGLE_SEARCH_CX", ""),
+		CORSAllowedOrigins:     getEnv("CORS_ALLOWED_ORIGINS", ""),
 	}
 }
 

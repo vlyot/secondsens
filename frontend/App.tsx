@@ -22,6 +22,7 @@ import { getRecommendation, saveHistory, type HistoryItem } from '@/services/api
 import { isAmbiguousResponse, isCompareResponse } from '@/lib/types';
 import type { Preferences, Product, RecommendationResponse } from '@/lib/types';
 import { CompareSummaryBanner } from '@/components/RecommendationDisplay';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 type AppStep = 'landing' | 'search' | 'sliders' | 'results' | 'disambiguation' | 'compare_disambiguation' | 'error' | 'docs' | 'auth' | 'history' | 'profile';
 
@@ -521,14 +522,16 @@ function AppInner() {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <AuthProvider>
-        <div className="absolute right-4 top-4 z-50">
-          <ModeToggle />
-        </div>
-        <AppInner />
-      </AuthProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+        <AuthProvider>
+          <div className="absolute right-4 top-4 z-50">
+            <ModeToggle />
+          </div>
+          <AppInner />
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -64,28 +64,7 @@ approval and integration testing.
 not completed yet
 ---
 
-### 4.5 Batch / Compare Mode
-
-**Goal:** Let users compare two products side-by-side using the same preference set.
-
-**UI flow:**
-- On the search page, add a "+ Compare" button that reveals a second search input
-- Both products go through disambiguation independently if needed
-- Preferences page is shared — one set of sliders applies to both
-- Results page splits into two columns: left product vs right product
-- Each column has its own verdict banner, price bars, and marketplace links
-- A summary row at the bottom: "For your preferences, [Product A] is the better buy" based on whichever has higher confidence
-
-**Backend changes:**
-- Extend `/api/recommend` to accept an optional `compare_product` field
-- If present, run two recommendation pipelines (can be goroutines in parallel)
-- Return both results in a single response: `{ primary: {...}, compare: {...} }`
-- Both results benefit from the shared cache (Phase 4.2) independently
-
-**Frontend changes:**
-- `App.tsx` state machine adds optional `compareProduct` and `compareRecommendation` fields
-- `ResultsPage.tsx` conditionally renders single or dual column layout
-- On mobile, dual column stacks vertically
+### 4.5 Batch / Compare Mode ✅
 
 ---
 ### 5 - Getting ready for release to public

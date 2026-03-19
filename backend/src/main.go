@@ -13,6 +13,10 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -24,6 +28,7 @@ import (
 	"secondsense/backend/src/products"
 	"secondsense/backend/src/recommendations"
 	"secondsense/backend/src/shared"
+	"golang.org/x/time/rate"
 )
 
 func main() {
@@ -65,7 +70,7 @@ func main() {
 	recService := recommendations.NewRecommendationService(llmClient)
 
 	router := gin.Default()
-	router.Use(corsMiddleware())
+	router.Use(corsMiddleware(cfg.CORSAllowedOrigins))
 
 	// Initialise Supabase client (optional — nil disables cache + history)
 	var supabaseClient *shared.SupabaseClient
@@ -78,7 +83,7 @@ func main() {
 	router.GET("/api/products", products.HandleProductList(productService))
 	router.GET("/api/products/popular", products.HandlePopularProducts(supabaseClient))
 	router.GET("/api/products/search", products.HandleProductSearch(productService))
-	router.POST("/api/recommend", recommendations.HandleRecommendation(productService, priceService, recService, recCache, supabaseClient))
+	router.POST("/api/recommend", rateLimitMiddleware(), recommendations.HandleRecommendation(productService, priceService, recService, recCache, supabaseClient))
 	router.GET("/api/product-image", images.HandleProductImage(supabaseClient, cfg))
 
 	// History routes — require a valid Supabase JWT (JWKS-based, no secret needed)
@@ -102,13 +107,55 @@ func main() {
 	router.Run(":" + cfg.Port)
 }
 
-func corsMiddleware() gin.HandlerFunc {
+// corsMiddleware allows requests from origins in the CORS_ALLOWED_ORIGINS env var
+// (comma-separated). Falls back to wildcard when the var is unset for local dev.
+func corsMiddleware(allowedOrigins string) gin.HandlerFunc {
+	originSet := make(map[string]struct{})
+	if allowedOrigins != "" {
+		for _, o := range strings.Split(allowedOrigins, ",") {
+			originSet[strings.TrimSpace(o)] = struct{}{}
+		}
+	}
+
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := c.Request.Header.Get("Origin")
+		if len(originSet) == 0 {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		} else if _, ok := originSet[origin]; ok {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Vary", "Origin")
+		} else if origin != "" {
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Country")
 		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.Next()
+	}
+}
+
+// ipLimiters stores a rate.Limiter per client IP.
+var ipLimiters sync.Map
+
+func getLimiter(ip string) *rate.Limiter {
+	if v, ok := ipLimiters.Load(ip); ok {
+		return v.(*rate.Limiter)
+	}
+	// 3 requests/minute with a burst of 5
+	l := rate.NewLimiter(rate.Every(20*time.Second), 5)
+	ipLimiters.Store(ip, l)
+	return l
+}
+
+// rateLimitMiddleware enforces per-IP rate limiting on expensive endpoints.
+func rateLimitMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !getLimiter(c.ClientIP()).Allow() {
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "rate limit exceeded — please wait a moment"})
 			return
 		}
 		c.Next()
