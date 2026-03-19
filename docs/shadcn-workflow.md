@@ -42,9 +42,9 @@ Before writing any code, clearly identify what UI component you need:
 
 Once you've identified the correct shadcn component:
 
-1. **Install if needed** (if component doesn't exist in `src/components/ui/`):
+1. **Install if needed** (if component doesn't exist in `frontend/components/ui/`):
    ```bash
-   npx shadcn-ui@latest add <component-name>
+   npx shadcn@latest add <component-name>
    ```
 
 2. **Import the component**:

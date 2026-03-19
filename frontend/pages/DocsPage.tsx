@@ -10,11 +10,11 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
           ← Back to Home
         </Button>
 
-        {/* What is SecondSense */}
+        {/* What is SecondSens */}
         <section className="space-y-3">
           <Display>Learn How It Works</Display>
           <Lead>
-            SecondSense helps you decide whether to buy a product brand new or secondhand,
+            SecondSens helps you decide whether to buy a product brand new or secondhand,
             using AI-powered market analysis personalised to your preferences.
           </Lead>
         </section>
@@ -27,7 +27,7 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
           <P>
             The secondhand market is fragmented. Prices vary wildly by condition, platform, and
             timing — and most people don't know if they're getting a fair deal, or if they should even buy second 
-            hand to begin with. SecondSense removes
+            hand to begin with. SecondSens removes
             that guesswork by combining real-time price data with your personal priorities to give
             you a clear, reasoned recommendation.
           </P>
@@ -42,7 +42,7 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
             <li><P className="inline">Search for a product by name — recently searched products appear at the top of suggestions.</P></li>
             <li><P className="inline">Optionally tap <strong>+ Compare two products</strong> to enter compare mode and pit two products head-to-head.</P></li>
             <li><P className="inline">Tune your preferences — budget sensitivity, quality expectations, urgency, and more. In compare mode, one set of preferences applies to both products.</P></li>
-            <li><P className="inline">SecondSense analyses current market prices across all condition tiers.</P></li>
+            <li><P className="inline">SecondSens analyses current market prices across all condition tiers.</P></li>
             <li><P className="inline">You receive a ranked recommendation with reasoning and a savings breakdown — or a side-by-side comparison with a verdict on which product is the better buy for your preferences.</P></li>
             <li><P className="inline">Sign in to save your searches and re-run any past recommendation in one tap.</P></li>
           </ol>
@@ -115,23 +115,23 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
           <div className="space-y-4">
             <div>
               <H3>Is this free?</H3>
-              <P>Yes. SecondSense is completely free to use.</P>
+              <P>Yes. SecondSens is completely free to use.</P>
             </div>
             <div>
               <H3>How current are the prices?</H3>
               <P>
-                Prices are sourced from live marketplace listings. Results are cached for up to 14 days
+                Prices are sourced from live marketplace listings. Recommendations are cached for 24 hours
                 — if a cached result is shown, you'll see a <strong>"Prices sourced Xd ago"</strong> banner
                 with a <strong>Refresh</strong> button to fetch fresh data on demand.
               </P>
             </div>
             <div>
               <H3>What products are supported?</H3>
-              <P>We cover a broad catalog of consumer electronics and accessories. If your product isn't in the catalog, SecondSense will attempt to validate and price it dynamically.</P>
+              <P>We cover a broad catalog of consumer electronics and accessories. If your product isn't in the catalog, SecondSens will attempt to validate and price it dynamically.</P>
             </div>
             <div>
               <H3>How is my recommendation calculated?</H3>
-              <P>SecondSense weighs your six preference dimensions against current market price data across all condition tiers to produce a ranked recommendation with confidence scoring.</P>
+              <P>SecondSens weighs your six preference dimensions against current market price data across all condition tiers to produce a ranked recommendation with confidence scoring.</P>
             </div>
             <div>
               <H3>How does compare mode work under the hood?</H3>
@@ -144,7 +144,7 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
             <div>
               <H3>What is disambiguation?</H3>
               <P>
-                If your search matches multiple distinct products (e.g. "iPad" could be any generation), SecondSense will ask you to pick exactly which one you mean before proceeding.
+                If your search matches multiple distinct products (e.g. "iPad" could be any generation), SecondSens will ask you to pick exactly which one you mean before proceeding.
                 In compare mode, each product is disambiguated independently — so one product may be unambiguous while the other triggers a selection step.
               </P>
             </div>
@@ -161,7 +161,7 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
               <H3>Compare Mode</H3>
               <P>
                 Can't decide between two products? Tap <strong>+ Compare two products</strong> on the search page to enter compare mode.
-                Enter both product names, set your preferences once, and SecondSense runs both pipelines in parallel —
+                Enter both product names, set your preferences once, and SecondSens runs both pipelines in parallel —
                 returning a side-by-side view with individual verdicts and a summary banner declaring which product is the better buy for your specific priorities.
                 Compare mode requests allow up to 120 seconds since both pipelines run fresh data simultaneously;
                 cached results return instantly just like single searches.
@@ -170,10 +170,10 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
             <div>
               <H3>Gets Faster With Use</H3>
               <P>
-                SecondSense maintains a shared price cache. Once a product has been searched by anyone,
+                SecondSens maintains a shared price cache. Once a product has been searched by anyone,
                 subsequent searches for the same product with the same preferences return instantly —
                 no AI call needed. The app genuinely gets faster the more it is used.
-                Results older than 14 days are automatically refreshed to keep prices current.
+                Results older than 24 hours are automatically refreshed to keep prices current.
                 If you want live prices right now, hit the <strong>Refresh</strong> button on any cached result.
               </P>
             </div>
@@ -206,6 +206,37 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
               <H3>Keyboard Shortcut</H3>
               <P>
                 Press <strong>Ctrl+Shift+R</strong> at any time to do a clean reset back to the home page.
+              </P>
+            </div>
+          </div>
+        </section>
+
+        <Separator />
+
+        {/* Account */}
+        <section className="space-y-4">
+          <H2>Your Account</H2>
+          <div className="space-y-4">
+            <div>
+              <H3>Sign In</H3>
+              <P>
+                SecondSens uses passwordless sign-in — enter your email and you'll receive a magic link.
+                No password to remember or lose.
+              </P>
+            </div>
+            <div>
+              <H3>History</H3>
+              <P>
+                Every recommendation you run while signed in is automatically saved to your history.
+                Open the history page from the navigation bar to browse past searches, see the top verdict at a glance,
+                and re-run any search with one tap.
+              </P>
+            </div>
+            <div>
+              <H3>Profile</H3>
+              <P>
+                Your profile page shows your account details and lets you sign out.
+                Your history is private — only you can see it.
               </P>
             </div>
           </div>

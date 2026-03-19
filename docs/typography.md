@@ -1,6 +1,6 @@
 # Typography System Reference
 
-Complete guide to the typography system in this project. All text styling uses composable typography components from `src/components/ui/typography.tsx`.
+Complete guide to the typography system in this project. All text styling uses composable typography components from `frontend/components/ui/typography.tsx`.
 
 ## Component API Reference
 
@@ -20,7 +20,7 @@ import {
 **H1** - Main page heading
 - Styles: `scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl`
 - Use for: Top-level page titles
-- Example: `<H1>SecondSense Product Catalog</H1>`
+- Example: `<H1>SecondSens Product Catalog</H1>`
 
 **H2** - Section heading with border
 - Styles: `text-3xl font-semibold tracking-tight` (includes bottom border by default)
@@ -40,7 +40,7 @@ import {
 **Display** - Large display heading
 - Styles: `text-3xl font-bold tracking-tight`
 - Use for: Prominent content titles, hero sections
-- Example: `<Display>Welcome to SecondSense</Display>`
+- Example: `<Display>Welcome to SecondSens</Display>`
 
 ### Body Text
 
@@ -89,7 +89,7 @@ import {
 **Emoji** - Emoji sizing
 - Styles: `text-2xl`
 - Use for: Consistent emoji display
-- Note: **DO NOT USE** - Use FontAwesome icons instead per project guidelines
+- Note: **DO NOT USE** - Use Lucide icons instead per project guidelines (`lucide-react`)
 
 **Code** - Inline code styling
 - Styles: Monospace with background
@@ -143,7 +143,7 @@ import {
 ```typescript
 // Page layout with proper typography
 <div className="space-y-6">
-  <Display>Welcome to SecondSense</Display>
+  <Display>Welcome to SecondSens</Display>
   <P>Find the best deals on used gaming peripherals</P>
 
   <H2>Featured Products</H2>
