@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { TriangleAlert } from 'lucide-react';
+import { TriangleAlert, Trophy, Minus } from 'lucide-react';
 import type { RecommendationResponse, RankedOption } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { H3, Muted, Small, Display, PriceDisplay, StatDisplay } from '@/components/ui/typography';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { staggerContainerVariants, staggerItemVariants } from '@/animations/variants';
+import { ProductThumbnail } from '@/components/ProductThumbnail';
 
 /**
  * RecommendationDisplay - Shows ranked recommendations with staggered animations
@@ -40,10 +41,15 @@ export function RecommendationDisplay({
     >
       {/* Product header */}
       <motion.div variants={staggerItemVariants}>
-        <Display>{data.product_name}</Display>
-        {data.product_description && (
-          <Muted className="mt-1">{data.product_description}</Muted>
-        )}
+        <div className="flex items-start gap-4">
+          <ProductThumbnail productName={data.product_name} size="md" />
+          <div className="min-w-0">
+            <Display>{data.product_name}</Display>
+            {data.product_description && (
+              <Muted className="mt-1">{data.product_description}</Muted>
+            )}
+          </div>
+        </div>
         {!data.new_product_exception && data.recommendations.length > 0 && (() => {
           const isBrandNew = data.recommendations[0].condition === 'brand_new';
           return (
@@ -307,6 +313,48 @@ function getConfidenceVariant(confidence: string): 'default' | 'destructive' {
     default:
       return 'default';
   }
+}
+
+function confidenceScore(level: string): number {
+  switch (level.toLowerCase()) {
+    case 'high':   return 3;
+    case 'medium': return 2;
+    case 'low':    return 1;
+    default:       return 0;
+  }
+}
+
+/**
+ * CompareSummaryBanner - Verdict row shown below dual-column compare results.
+ * Picks the winner based on confidence_score; shows a tie message on equal scores.
+ */
+export function CompareSummaryBanner({
+  primary,
+  compare,
+}: {
+  primary: RecommendationResponse;
+  compare: RecommendationResponse;
+}) {
+  const primaryScore = confidenceScore(primary.confidence_score);
+  const compareScore = confidenceScore(compare.confidence_score);
+  const isTie = primaryScore === compareScore;
+  const winner = isTie ? null : primaryScore > compareScore ? primary : compare;
+
+  return (
+    <Alert className="mt-6">
+      {isTie ? (
+        <Minus className="h-4 w-4" />
+      ) : (
+        <Trophy className="h-4 w-4" />
+      )}
+      <AlertTitle>{isTie ? 'Too close to call' : 'Better buy for your preferences'}</AlertTitle>
+      <AlertDescription>
+        {isTie
+          ? 'Both products score equally for your preferences. Either is a solid choice.'
+          : `${winner!.product_name} edges ahead with ${winner!.confidence_score.toLowerCase()} confidence.`}
+      </AlertDescription>
+    </Alert>
+  );
 }
 
 export default RecommendationDisplay;

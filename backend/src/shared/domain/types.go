@@ -4,8 +4,15 @@ import "time"
 
 // RecommendationRequest is the incoming request from the frontend.
 type RecommendationRequest struct {
-	Item        string      `json:"item"`
-	Preferences Preferences `json:"preferences"`
+	Item           string      `json:"item"`
+	Preferences    Preferences `json:"preferences"`
+	CompareProduct string      `json:"compare_product,omitempty"`
+}
+
+// CompareResponse is returned when compare_product is provided in the request.
+type CompareResponse struct {
+	Primary *RecommendationResponse `json:"primary"`
+	Compare *RecommendationResponse `json:"compare"`
 }
 
 // Preferences captures the user's six-preference inputs.

@@ -19,6 +19,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	_ "secondsense/backend/docs"
 	"secondsense/backend/src/history"
+	"secondsense/backend/src/images"
 	"secondsense/backend/src/prices"
 	"secondsense/backend/src/products"
 	"secondsense/backend/src/recommendations"
@@ -78,6 +79,7 @@ func main() {
 	router.GET("/api/products/popular", products.HandlePopularProducts(supabaseClient))
 	router.GET("/api/products/search", products.HandleProductSearch(productService))
 	router.POST("/api/recommend", recommendations.HandleRecommendation(productService, priceService, recService, recCache, supabaseClient))
+	router.GET("/api/product-image", images.HandleProductImage(supabaseClient, cfg))
 
 	// History routes — require a valid Supabase JWT (JWKS-based, no secret needed)
 	if supabaseClient != nil {

@@ -19,9 +19,11 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { DEFAULT_PREFERENCES } from '@/lib/constants';
 import { getMarketplaceLinks } from '@/lib/marketplaceLinks';
 import { getRecommendation, saveHistory, type HistoryItem } from '@/services/api';
+import { isAmbiguousResponse, isCompareResponse } from '@/lib/types';
 import type { Preferences, Product, RecommendationResponse } from '@/lib/types';
+import { CompareSummaryBanner } from '@/components/RecommendationDisplay';
 
-type AppStep = 'landing' | 'search' | 'sliders' | 'results' | 'disambiguation' | 'error' | 'docs' | 'auth' | 'history' | 'profile';
+type AppStep = 'landing' | 'search' | 'sliders' | 'results' | 'disambiguation' | 'compare_disambiguation' | 'error' | 'docs' | 'auth' | 'history' | 'profile';
 
 interface SharePayload {
   product: string;
@@ -51,6 +53,12 @@ interface AppState {
   isRefreshing: boolean;
   error: string | null;
   disambiguation: Product[] | null;
+  // Compare mode fields
+  isCompareMode: boolean;
+  compareQuery: string;
+  compareProduct: Product | null;
+  compareRecommendation: RecommendationResponse | null;
+  compareDisambiguation: Product[] | null;
 }
 
 function AppInner() {
@@ -66,6 +74,11 @@ function AppInner() {
     isRefreshing: false,
     error: null,
     disambiguation: null,
+    isCompareMode: false,
+    compareQuery: '',
+    compareProduct: null,
+    compareRecommendation: null,
+    compareDisambiguation: null,
   });
 
   // Decode ?s= share param on mount and auto-run recommendation.
@@ -128,6 +141,26 @@ function AppInner() {
       searchQuery: query,
       selectedProduct: null,
       error: null,
+      isCompareMode: false,
+      compareQuery: '',
+      compareProduct: null,
+      compareRecommendation: null,
+      compareDisambiguation: null,
+    }));
+  };
+
+  const handleCompareSearch = (primary: string, compare: string) => {
+    setState((prev) => ({
+      ...prev,
+      currentStep: 'sliders',
+      searchQuery: primary,
+      selectedProduct: null,
+      error: null,
+      isCompareMode: true,
+      compareQuery: compare,
+      compareProduct: null,
+      compareRecommendation: null,
+      compareDisambiguation: null,
     }));
   };
 
@@ -141,14 +174,41 @@ function AppInner() {
 
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-    try {
-      const result = await getRecommendation(query, state.preferences);
+    // Determine compare product name if in compare mode
+    const compareProductName = state.isCompareMode
+      ? (state.compareProduct?.canonical_name ?? state.compareQuery)
+      : undefined;
 
-      if ('status' in result && result.status === 'AMBIGUOUS') {
+    try {
+      const result = await getRecommendation(query, state.preferences, false, compareProductName || undefined);
+
+      if (isAmbiguousResponse(result)) {
+        if (result.context === 'compare') {
+          // The compare product is ambiguous
+          setState((prev) => ({
+            ...prev,
+            currentStep: 'compare_disambiguation',
+            compareDisambiguation: result.matches,
+            isLoading: false,
+          }));
+        } else {
+          // The primary product is ambiguous
+          setState((prev) => ({
+            ...prev,
+            currentStep: 'disambiguation',
+            disambiguation: result.matches,
+            isLoading: false,
+          }));
+        }
+        return;
+      }
+
+      if (isCompareResponse(result)) {
         setState((prev) => ({
           ...prev,
-          currentStep: 'disambiguation',
-          disambiguation: result.matches,
+          currentStep: 'results',
+          recommendation: result.primary,
+          compareRecommendation: result.compare,
           isLoading: false,
         }));
         return;
@@ -205,6 +265,26 @@ function AppInner() {
     }));
   };
 
+  const handleSelectCompareProduct = (product: Product) => {
+    setState((prev) => ({
+      ...prev,
+      currentStep: 'sliders',
+      compareProduct: product,
+      compareDisambiguation: null,
+    }));
+  };
+
+  const handleCancelCompareDisambiguation = () => {
+    setState((prev) => ({
+      ...prev,
+      currentStep: 'search',
+      isCompareMode: false,
+      compareQuery: '',
+      compareProduct: null,
+      compareDisambiguation: null,
+    }));
+  };
+
   const handleRefresh = async () => {
     const query = state.selectedProduct?.canonical_name ?? state.searchQuery;
     if (!query) return;
@@ -248,6 +328,11 @@ function AppInner() {
       recommendation: null,
       preferences: DEFAULT_PREFERENCES,
       searchQuery: '',
+      isCompareMode: false,
+      compareQuery: '',
+      compareProduct: null,
+      compareRecommendation: null,
+      compareDisambiguation: null,
     }));
   };
 
@@ -289,6 +374,7 @@ function AppInner() {
       {state.currentStep === 'search' && (
         <SearchPage
           onSearch={handleSearch}
+          onCompareSearch={handleCompareSearch}
           isLoading={state.isLoading}
           onGoToAuth={handleGoToAuth}
           onGoToHistory={handleGoToHistory}
@@ -300,14 +386,14 @@ function AppInner() {
       {!isFullPage && (
         <BackgroundLayout>
           <div className="min-h-screen p-4 md:p-8">
-            <div className="max-w-2xl mx-auto">
+            <div className={`mx-auto ${state.isCompareMode && state.currentStep === 'results' ? 'max-w-5xl' : 'max-w-2xl'}`}>
               <header className="mb-8 text-center relative">
                 <H1 className="text-white mb-2 drop-shadow-2xl">SecondSense</H1>
                 <P className="text-white/90 mt-0 drop-shadow-lg">Should you purchase it brand new or used?</P>
               </header>
 
               <div className="bg-card text-card-foreground rounded-lg shadow-lg p-6 md:p-8">
-                {['sliders', 'results', 'error', 'disambiguation'].includes(state.currentStep) && (
+                {['sliders', 'results', 'error', 'disambiguation', 'compare_disambiguation'].includes(state.currentStep) && (
                   <FlowBreadcrumbs
                     currentStep={
                       state.currentStep === 'sliders' ? 'preferences'
@@ -327,6 +413,7 @@ function AppInner() {
                 {state.currentStep === 'sliders' && (
                   <PreferencesPage
                     selectedProduct={state.selectedProduct ?? { id: '', canonical_name: state.searchQuery, category: '', aliases: [] }}
+                    compareProduct={state.isCompareMode ? (state.compareProduct ?? { id: '', canonical_name: state.compareQuery, category: '', aliases: [] }) : undefined}
                     preferences={state.preferences}
                     isLoading={state.isLoading}
                     onPreferencesChange={handlePreferencesChange}
@@ -336,13 +423,43 @@ function AppInner() {
                 )}
 
                 {state.currentStep === 'results' && state.recommendation && (
-                  <ResultsPage
-                    recommendation={state.recommendation}
-                    onFindListings={handleFindListings}
-                    onNewSearch={handleNewSearch}
-                    onRefresh={handleRefresh}
-                    isRefreshing={state.isRefreshing}
-                  />
+                  state.isCompareMode && state.compareRecommendation ? (
+                    <>
+                      <div className="flex flex-col gap-8 md:flex-row md:items-start">
+                        <div className="flex-1 min-w-0">
+                          <ResultsPage
+                            recommendation={state.recommendation}
+                            onFindListings={handleFindListings}
+                            onNewSearch={handleNewSearch}
+                            onRefresh={handleRefresh}
+                            isRefreshing={state.isRefreshing}
+                          />
+                        </div>
+                        <div className="hidden md:block w-px bg-border self-stretch" aria-hidden="true" />
+                        <div className="flex-1 min-w-0">
+                          <ResultsPage
+                            recommendation={state.compareRecommendation}
+                            onFindListings={handleFindListings}
+                            onNewSearch={handleNewSearch}
+                            onRefresh={handleRefresh}
+                            isRefreshing={state.isRefreshing}
+                          />
+                        </div>
+                      </div>
+                      <CompareSummaryBanner
+                        primary={state.recommendation}
+                        compare={state.compareRecommendation}
+                      />
+                    </>
+                  ) : (
+                    <ResultsPage
+                      recommendation={state.recommendation}
+                      onFindListings={handleFindListings}
+                      onNewSearch={handleNewSearch}
+                      onRefresh={handleRefresh}
+                      isRefreshing={state.isRefreshing}
+                    />
+                  )
                 )}
 
                 {state.currentStep === 'error' && (
@@ -379,6 +496,15 @@ function AppInner() {
                   onSelect={handleSelectProduct}
                   onCancel={handleCancelDisambiguation}
                   onNoneSelected={handleNoneSelected}
+                />
+              )}
+
+              {state.currentStep === 'compare_disambiguation' && state.compareDisambiguation && (
+                <ProductDisambiguation
+                  products={state.compareDisambiguation}
+                  onSelect={handleSelectCompareProduct}
+                  onCancel={handleCancelCompareDisambiguation}
+                  onNoneSelected={handleCancelCompareDisambiguation}
                 />
               )}
 

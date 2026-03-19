@@ -8,6 +8,8 @@ import (
 	"math"
 	"regexp"
 	"sort"
+	"strings"
+	"sync"
 
 	"secondsense/backend/src/shared/domain"
 )
@@ -40,10 +42,64 @@ func sanitisePriceJSON(s string) string {
 }
 
 // FetchPrices fetches prices for all condition tiers.
-// It tries eBay first (when configured), using countryCode to select the right marketplace.
-// Any tier with fewer than 3 eBay results falls back to a Gemini grounded search.
+// When eBay is configured, eBay and Gemini run in parallel; results are merged
+// per-tier (eBay wins when it has ≥3 listings, Gemini fills the rest).
 // Returns the price data and a source map (per tier: "ebay" or "ai_estimate").
 func (ps *PriceService) FetchPrices(ctx context.Context, canonicalName, countryCode string) (*domain.PriceData, map[string]string, error) {
+	if ps.ebay == nil {
+		// No eBay client — Gemini only.
+		data, err := ps.fetchFromGemini(ctx, canonicalName, countryCode)
+		if err != nil {
+			return nil, nil, err
+		}
+		sources := map[string]string{
+			"brand_new": "ai_estimate",
+			"like_new":  "ai_estimate",
+			"good":      "ai_estimate",
+			"well_used": "ai_estimate",
+		}
+		return data, sources, nil
+	}
+
+	// Launch eBay and Gemini in parallel.
+	var (
+		ebayResult *EbayPriceResult
+		ebayErr    error
+		geminiData *domain.PriceData
+		geminiErr  error
+		wg         sync.WaitGroup
+	)
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		ebayResult, ebayErr = ps.ebay.FetchPrices(ctx, canonicalName, countryCode)
+	}()
+	go func() {
+		defer wg.Done()
+		geminiData, geminiErr = ps.fetchFromGemini(ctx, canonicalName, countryCode)
+	}()
+	wg.Wait()
+
+	if ebayErr != nil {
+		log.Printf("eBay price fetch failed: %v", ebayErr)
+	}
+	if geminiErr != nil {
+		log.Printf("Gemini price fetch failed: %v", geminiErr)
+	}
+
+	// Merge: eBay wins per-tier when it has ≥3 listings; Gemini fills the rest.
+	data, sources := mergePriceData(ebayResult, geminiData)
+	if data != nil {
+		return sanitiseTiers(data), sources, nil
+	}
+
+	return nil, nil, fmt.Errorf("all price sources failed for %q", canonicalName)
+}
+
+// mergePriceData combines eBay and Gemini results. eBay wins per-tier when it
+// has ≥3 price points; Gemini fills any tier where eBay is sparse or absent.
+// Returns nil data only when both inputs are nil.
+func mergePriceData(ebay *EbayPriceResult, gemini *domain.PriceData) (*domain.PriceData, map[string]string) {
 	sources := map[string]string{
 		"brand_new": "ai_estimate",
 		"like_new":  "ai_estimate",
@@ -51,112 +107,81 @@ func (ps *PriceService) FetchPrices(ctx context.Context, canonicalName, countryC
 		"well_used": "ai_estimate",
 	}
 
-	// Try eBay when a client is configured.
-	if ps.ebay != nil {
-		ebayResult, err := ps.ebay.FetchPrices(ctx, canonicalName, countryCode)
-		if err != nil {
-			log.Printf("eBay price fetch failed (falling back to Gemini): %v", err)
-		} else {
-			// Check if eBay returned enough data across all tiers to skip Gemini entirely.
-			tiersWithData := 0
-			for tierKey, prices := range ebayResult.Tiers {
-				if len(prices) >= 3 {
-					tiersWithData++
-					sources[tierKey] = "ebay"
-				}
+	if ebay == nil && gemini == nil {
+		return nil, sources
+	}
+
+	tierKeys := []string{"brand_new", "like_new", "good", "well_used"}
+	result := &domain.PriceData{}
+
+	for _, key := range tierKeys {
+		var ebayPrices []float64
+		if ebay != nil {
+			ebayPrices = ebay.Tiers[key]
+		}
+
+		if len(ebayPrices) >= 3 {
+			// eBay has sufficient coverage for this tier.
+			sources[key] = "ebay"
+			switch key {
+			case "brand_new":
+				result.BrandNew = validateTier(ebayPrices)
+			case "like_new":
+				result.LikeNew = validateTier(ebayPrices)
+			case "good":
+				result.Good = validateTier(ebayPrices)
+			case "well_used":
+				result.WellUsed = validateTier(ebayPrices)
 			}
-
-			// If eBay covered at least 2 tiers, build a mixed result:
-			// use eBay data where available, fall back to Gemini only for sparse tiers.
-			if tiersWithData >= 2 {
-				ebayData := &domain.PriceData{
-					BrandNew: validateTier(ebayResult.Tiers["brand_new"]),
-					LikeNew:  validateTier(ebayResult.Tiers["like_new"]),
-					Good:     validateTier(ebayResult.Tiers["good"]),
-					WellUsed: validateTier(ebayResult.Tiers["well_used"]),
-				}
-
-				// For any tier that eBay couldn't cover, fill from Gemini.
-				sparseTiers := []string{}
-				for tierKey, src := range sources {
-					if src == "ai_estimate" {
-						sparseTiers = append(sparseTiers, tierKey)
-					}
-				}
-				if len(sparseTiers) > 0 {
-					geminiData, err := ps.fetchFromGemini(ctx, canonicalName, countryCode)
-					if err != nil {
-						log.Printf("Gemini fallback for sparse tiers failed: %v", err)
-					} else {
-						if sources["brand_new"] == "ai_estimate" && len(geminiData.BrandNew) > 0 {
-							ebayData.BrandNew = geminiData.BrandNew
-						}
-						if sources["like_new"] == "ai_estimate" && len(geminiData.LikeNew) > 0 {
-							ebayData.LikeNew = geminiData.LikeNew
-						}
-						if sources["good"] == "ai_estimate" && len(geminiData.Good) > 0 {
-							ebayData.Good = geminiData.Good
-						}
-						if sources["well_used"] == "ai_estimate" && len(geminiData.WellUsed) > 0 {
-							ebayData.WellUsed = geminiData.WellUsed
-						}
-					}
-				}
-
-				data := sanitiseTiers(ebayData)
-				if len(data.BrandNew) > 0 || len(data.LikeNew) > 0 || len(data.Good) > 0 || len(data.WellUsed) > 0 {
-					return data, sources, nil
-				}
+		} else if gemini != nil {
+			// Gemini fills the gap.
+			switch key {
+			case "brand_new":
+				result.BrandNew = gemini.BrandNew
+			case "like_new":
+				result.LikeNew = gemini.LikeNew
+			case "good":
+				result.Good = gemini.Good
+			case "well_used":
+				result.WellUsed = gemini.WellUsed
 			}
 		}
 	}
 
-	// Full Gemini fallback (no eBay client, or eBay returned < 2 useful tiers).
-	data, err := ps.fetchFromGemini(ctx, canonicalName, countryCode)
-	if err != nil {
-		return nil, nil, err
+	if len(result.BrandNew) == 0 && len(result.LikeNew) == 0 && len(result.Good) == 0 && len(result.WellUsed) == 0 {
+		return nil, sources
 	}
-	// All tiers come from Gemini — sources map already defaults to "ai_estimate".
-	return data, sources, nil
+	return result, sources
 }
 
-// fetchFromGemini performs the original Gemini grounded search for prices.
-// countryCode is used to tailor the market context (SG → Carousell/Lazada, others → broader search).
+// fetchFromGemini uses a single SearchWithGrounding call to both find live
+// secondhand prices and return them classified into condition tiers as JSON.
+// Combining search + extraction into one call saves one Gemini round-trip.
 func (ps *PriceService) fetchFromGemini(ctx context.Context, canonicalName, countryCode string) (*domain.PriceData, error) {
 	marketContext := geminiMarketContext(countryCode)
 
-	searchPrompt := fmt.Sprintf(
+	prompt := fmt.Sprintf(
 		"Search for current secondhand market prices for \"%s\". "+
-			"%s "+
-			"List realistic asking prices for each condition tier: brand new (retail/near-retail), "+
-			"like new (minimal wear, fully functional), good (normal use marks, fully functional), "+
-			"well used (visible wear but working). "+
-			"Prices must reflect actual market listings — do not include broken, for-parts, or heavily damaged items. "+
-			"Give at least 3 specific price examples per tier.",
+			"%s\n\n"+
+			"Find realistic asking prices across these four condition tiers:\n"+
+			"- brand_new: sealed or near-retail condition (full price or slight discount)\n"+
+			"- like_new: opened/lightly used, no visible wear, fully functional\n"+
+			"- good: normal signs of use (minor scratches/scuffs), fully functional\n"+
+			"- well_used: visible wear consistent with regular use, still working\n\n"+
+			"Exclude broken, for-parts, or heavily damaged listings.\n"+
+			"Collect at least 3 real price examples per tier from actual listings.\n\n"+
+			"Return ONLY a JSON object — no prose, no markdown fences — in exactly this shape:\n"+
+			"{\"brand_new\":[<numbers>],\"like_new\":[<numbers>],\"good\":[<numbers>],\"well_used\":[<numbers>]}\n"+
+			"Use [] for any tier where no prices were found. Numbers only, no currency symbols.",
 		canonicalName, marketContext,
 	)
 
-	searchResults, err := ps.llm.SearchWithGrounding(ctx, searchPrompt)
+	raw, err := ps.llm.SearchWithGrounding(ctx, prompt)
 	if err != nil {
 		return nil, fmt.Errorf("price search failed: %w", err)
 	}
 
-	extractPrompt := fmt.Sprintf(
-		"Extract all prices from the text below about \"%s\" secondhand.\n"+
-			"TEXT:\n%s\n\n"+
-			"Classify each price into: brand_new, like_new, good, well_used.\n"+
-			"Output ONLY valid JSON. Every key MUST have an array value; use [] when no prices for that tier.\n"+
-			"No markdown, no prose, no trailing commas.\n"+
-			"Example: {\"brand_new\":[199.0],\"like_new\":[130.0,125.0],\"good\":[95.0],\"well_used\":[]}\n"+
-			"Output the JSON:",
-		canonicalName, searchResults,
-	)
-
-	raw, err := ps.llm.GenerateJSON(ctx, extractPrompt)
-	if err != nil {
-		return nil, fmt.Errorf("price extraction failed: %w", err)
-	}
-
+	raw = extractJSON(raw)
 	raw = sanitisePriceJSON(raw)
 
 	var prices rawPrices
@@ -176,6 +201,29 @@ func (ps *PriceService) fetchFromGemini(ctx context.Context, canonicalName, coun
 	}
 
 	return data, nil
+}
+
+// extractJSON isolates the first complete JSON object in s, tolerating any
+// surrounding prose that the model may emit before or after the JSON block.
+func extractJSON(s string) string {
+	s = strings.TrimSpace(s)
+	// Strip markdown fences first (```json ... ``` or ``` ... ```).
+	if strings.HasPrefix(s, "```") {
+		s = s[3:]
+		if strings.HasPrefix(s, "json") {
+			s = s[4:]
+		}
+		if idx := strings.LastIndex(s, "```"); idx != -1 {
+			s = s[:idx]
+		}
+		s = strings.TrimSpace(s)
+	}
+	start := strings.Index(s, "{")
+	end := strings.LastIndex(s, "}")
+	if start != -1 && end != -1 && end > start {
+		return s[start : end+1]
+	}
+	return s
 }
 
 // geminiMarketContext returns a market-specific search instruction based on the country code.

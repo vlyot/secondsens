@@ -246,6 +246,83 @@ func (s *SupabaseClient) GetPopularProducts(limit int) ([]string, error) {
 	return names, nil
 }
 
+// ImageCacheRecord is a row from the image_cache table.
+type ImageCacheRecord struct {
+	ProductName string    `json:"product_name"`
+	ImageURL    string    `json:"image_url"`
+	FetchedAt   time.Time `json:"fetched_at"`
+}
+
+// GetImageCache looks up a cached image URL using a fuzzy ilike match on product name.
+// Returns empty string when there is no valid cache entry within 30 days.
+func (s *SupabaseClient) GetImageCache(productName string) (string, error) {
+	cutoff := time.Now().UTC().Add(-30 * 24 * time.Hour).Format(time.RFC3339)
+	endpoint := fmt.Sprintf(
+		"%s/rest/v1/image_cache?product_name=ilike.*%s*&fetched_at=gte.%s&limit=1",
+		s.baseURL,
+		url.QueryEscape(productName),
+		url.QueryEscape(cutoff),
+	)
+
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return "", fmt.Errorf("create request: %w", err)
+	}
+	s.setHeaders(req)
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("get image cache: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("supabase get image cache failed (%d): %s", resp.StatusCode, string(b))
+	}
+
+	var records []ImageCacheRecord
+	if err := json.NewDecoder(resp.Body).Decode(&records); err != nil {
+		return "", fmt.Errorf("decode image cache response: %w", err)
+	}
+	if len(records) == 0 {
+		return "", nil
+	}
+	return records[0].ImageURL, nil
+}
+
+// UpsertImageCache inserts or updates an image cache entry for the given product name.
+func (s *SupabaseClient) UpsertImageCache(productName, imageURL string) error {
+	payload := map[string]any{
+		"product_name": productName,
+		"image_url":    imageURL,
+		"fetched_at":   time.Now().UTC().Format(time.RFC3339),
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal payload: %w", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, s.baseURL+"/rest/v1/image_cache?on_conflict=product_name", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	s.setHeaders(req)
+	req.Header.Set("Prefer", "resolution=merge-duplicates,return=minimal")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("upsert image cache: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("supabase upsert image cache failed (%d): %s", resp.StatusCode, string(b))
+	}
+	return nil
+}
+
 func (s *SupabaseClient) setHeaders(req *http.Request) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("apikey", s.serviceRoleKey)

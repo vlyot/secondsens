@@ -8,6 +8,7 @@ import type { Preferences, Product } from '@/lib/types';
 
 interface PreferencesPageProps {
   selectedProduct: Product;
+  compareProduct?: Product;
   preferences: Preferences;
   isLoading: boolean;
   onPreferencesChange: (prefs: Preferences) => void;
@@ -23,6 +24,7 @@ interface PreferencesPageProps {
  */
 export function PreferencesPage({
   selectedProduct,
+  compareProduct,
   preferences,
   isLoading,
   onPreferencesChange,
@@ -40,10 +42,14 @@ export function PreferencesPage({
     >
       <motion.div variants={staggerItemVariants}>
         <H2 className="text-foreground mb-2 border-0">
-          {selectedProduct.canonical_name}
+          {compareProduct
+            ? `${selectedProduct.canonical_name} vs ${compareProduct.canonical_name}`
+            : selectedProduct.canonical_name}
         </H2>
         <P className="text-muted-foreground mb-6 mt-0">
-          Adjust your preferences to get personalized recommendations
+          {compareProduct
+            ? 'One set of preferences applies to both products'
+            : 'Adjust your preferences to get personalized recommendations'}
         </P>
       </motion.div>
 

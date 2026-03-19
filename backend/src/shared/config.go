@@ -15,6 +15,8 @@ type Config struct {
 	SupabaseURL            string
 	SupabaseServiceRoleKey string
 	EbayAppID              string
+	GoogleSearchAPIKey     string
+	GoogleSearchCX         string
 }
 
 // LoadConfig loads configuration from environment variables and .env file.
@@ -28,6 +30,8 @@ func LoadConfig() *Config {
 		SupabaseURL:            getEnv("SUPABASE_URL", ""),
 		SupabaseServiceRoleKey: getEnv("SUPABASE_SERVICE_ROLE_KEY", ""),
 		EbayAppID:              getEnv("EBAY_APP_ID", ""),
+		GoogleSearchAPIKey:     getEnv("GOOGLE_SEARCH_API_KEY", ""),
+		GoogleSearchCX:         getEnv("GOOGLE_SEARCH_CX", ""),
 	}
 }
 

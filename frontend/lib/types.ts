@@ -88,7 +88,23 @@ export interface Product {
 export interface AmbiguousResponse {
   status: 'AMBIGUOUS';
   matches: Product[];
+  /** "compare" when it's the compare_product that triggered disambiguation */
+  context?: string;
+}
+
+/** Returned by POST /api/recommend when compare_product is provided */
+export interface CompareResponse {
+  primary: RecommendationResponse;
+  compare: RecommendationResponse;
 }
 
 /** Union of all possible successful API responses */
-export type RecommendationResult = RecommendationResponse | AmbiguousResponse;
+export type RecommendationResult = RecommendationResponse | AmbiguousResponse | CompareResponse;
+
+export function isAmbiguousResponse(result: RecommendationResult): result is AmbiguousResponse {
+  return 'status' in result && (result as AmbiguousResponse).status === 'AMBIGUOUS';
+}
+
+export function isCompareResponse(result: RecommendationResult): result is CompareResponse {
+  return 'primary' in result && 'compare' in result;
+}

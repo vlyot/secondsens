@@ -36,12 +36,8 @@
 - Extract `currentBidPrice` or `price` from results, compute min/max across top 10 listings
 - Cache eBay results in the existing in-memory cache (24h TTL) to avoid hammering the API
 
-**Integration approach:**
-- Create `backend/src/prices/ebay_client.go`
-- In `price_service.go`, try eBay first; fall back to Gemini search if eBay returns < 3 results
-- eBay covers UK/US markets well; Gemini grounded search continues to cover SG (Carousell/Facebook)
-
-**Frontend:** No changes needed — the response shape is identical. The results will just have tighter, more accurate price ranges.
+incomplete — eBay live data pending developer account
+approval and integration testing.
 
 ---
 
@@ -65,6 +61,7 @@
 - Display as a 48×48px rounded thumbnail with `object-cover`
 - On error or timeout (>2s), show a FontAwesome `fa-box` placeholder icon — never block the UI
 
+not completed yet
 ---
 
 ### 4.5 Batch / Compare Mode

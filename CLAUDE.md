@@ -84,13 +84,14 @@ Navigation is **not** React Router — it is a state machine in `frontend/App.ts
 
 ```
 AppStep = 'landing' | 'search' | 'sliders' | 'results' | 'disambiguation'
-        | 'error' | 'docs' | 'auth' | 'history' | 'profile'
+        | 'compare_disambiguation' | 'error' | 'docs' | 'auth' | 'history' | 'profile'
 ```
 
 - `landing`, `search`, `docs` render full-page outside the card layout
 - All other steps render inside `BackgroundLayout → Card`
 - `FlowBreadcrumbs` renders step progress + auth nav (History / Profile / Sign in icons)
 - After a successful recommendation, history is saved fire-and-forget if user is signed in
+- **Compare mode**: `AppState` carries `isCompareMode`, `compareQuery`, `compareProduct`, `compareRecommendation`, `compareDisambiguation`. The `compare_disambiguation` step handles ambiguous compare products independently of the primary flow.
 
 ### Auth Flow
 
@@ -105,7 +106,7 @@ AppStep = 'landing' | 'search' | 'sliders' | 'results' | 'disambiguation'
 | `shared` | Config, in-memory cache, Gemini client, Supabase REST client, JWT middleware, domain types |
 | `products` | YAML catalog, fuzzy search, LLM dynamic product validation |
 | `prices` | Gemini-powered real-time price fetch per condition tier |
-| `recommendations` | Ranked Buy New / Used recommendations via Gemini |
+| `recommendations` | Ranked Buy New / Used recommendations via Gemini; supports optional `compare_product` for parallel dual-pipeline |
 | `history` | `POST /api/history` + `GET /api/history` (auth-gated, Supabase-backed) |
 
 ### In-Memory Caching
@@ -113,6 +114,7 @@ AppStep = 'landing' | 'search' | 'sliders' | 'results' | 'disambiguation'
 - Product validation: 10,000 entries, 7-day TTL
 - Recommendations: 10,000 entries, 24-hour TTL
 - Cache key: FNV32 hash of preference values concatenated with canonical product name
+- In compare mode, each product checks the cache independently — cache hits cost zero extra Gemini calls
 
 ### Environment Variables
 

@@ -64,11 +64,17 @@ function detectCountryCode(): string {
 export async function getRecommendation(
   item: string,
   preferences: Preferences,
-  forceRefresh = false
+  forceRefresh = false,
+  compareProduct?: string
 ): Promise<RecommendationResult> {
-  const request: RecommendationRequest = { item, preferences };
+  const request: RecommendationRequest & { compare_product?: string } = {
+    item,
+    preferences,
+    ...(compareProduct ? { compare_product: compareProduct } : {}),
+  };
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60_000);
+  const timeoutMs = compareProduct ? 120_000 : 60_000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const endpoint = forceRefresh
     ? `${API_URL}/api/recommend?force_refresh=true`
     : `${API_URL}/api/recommend`;
@@ -93,7 +99,11 @@ export async function getRecommendation(
     return response.json();
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error('The request timed out — the backend may be slow. Please try again.');
+      throw new Error(
+        compareProduct
+          ? 'The comparison timed out — both products require fresh price data which can be slow. Please try again.'
+          : 'The request timed out — the backend may be slow. Please try again.'
+      );
     }
     throw err;
   } finally {
@@ -112,6 +122,28 @@ export async function getPopularProducts(): Promise<string[]> {
     return response.json();
   } catch {
     return [];
+  }
+}
+
+/**
+ * Fetch a product thumbnail URL from the backend image cache / Google Custom Search.
+ * Returns null silently on error or timeout — never throws.
+ */
+export async function getProductImage(productName: string): Promise<string | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2_000);
+  try {
+    const response = await fetch(
+      `${API_URL}/api/product-image?q=${encodeURIComponent(productName)}`,
+      { signal: controller.signal }
+    );
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.image_url || null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

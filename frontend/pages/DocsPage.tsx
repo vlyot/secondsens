@@ -40,9 +40,10 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
           <H2>How It Works</H2>
           <ol className="space-y-3 list-decimal list-inside">
             <li><P className="inline">Search for a product by name — recently searched products appear at the top of suggestions.</P></li>
-            <li><P className="inline">Tune your preferences — budget sensitivity, quality expectations, urgency, and more.</P></li>
+            <li><P className="inline">Optionally tap <strong>+ Compare two products</strong> to enter compare mode and pit two products head-to-head.</P></li>
+            <li><P className="inline">Tune your preferences — budget sensitivity, quality expectations, urgency, and more. In compare mode, one set of preferences applies to both products.</P></li>
             <li><P className="inline">SecondSense analyses current market prices across all condition tiers.</P></li>
-            <li><P className="inline">You receive a ranked recommendation with reasoning and a savings breakdown.</P></li>
+            <li><P className="inline">You receive a ranked recommendation with reasoning and a savings breakdown — or a side-by-side comparison with a verdict on which product is the better buy for your preferences.</P></li>
             <li><P className="inline">Sign in to save your searches and re-run any past recommendation in one tap.</P></li>
           </ol>
         </section>
@@ -132,6 +133,21 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
               <H3>How is my recommendation calculated?</H3>
               <P>SecondSense weighs your six preference dimensions against current market price data across all condition tiers to produce a ranked recommendation with confidence scoring.</P>
             </div>
+            <div>
+              <H3>How does compare mode work under the hood?</H3>
+              <P>
+                When you compare two products, the backend runs both recommendation pipelines in parallel goroutines — so the wall-clock time is roughly the same as a single search, not double.
+                Each product checks the shared cache independently; if either has been searched recently with the same preferences, that result is served instantly at no extra cost.
+                Fresh comparisons use up to 4 Gemini calls total (2 per product), both running concurrently.
+              </P>
+            </div>
+            <div>
+              <H3>What is disambiguation?</H3>
+              <P>
+                If your search matches multiple distinct products (e.g. "iPad" could be any generation), SecondSense will ask you to pick exactly which one you mean before proceeding.
+                In compare mode, each product is disambiguated independently — so one product may be unambiguous while the other triggers a selection step.
+              </P>
+            </div>
           </div>
         </section>
 
@@ -141,6 +157,16 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
         <section className="space-y-4">
           <H2>Features</H2>
           <div className="space-y-4">
+            <div>
+              <H3>Compare Mode</H3>
+              <P>
+                Can't decide between two products? Tap <strong>+ Compare two products</strong> on the search page to enter compare mode.
+                Enter both product names, set your preferences once, and SecondSense runs both pipelines in parallel —
+                returning a side-by-side view with individual verdicts and a summary banner declaring which product is the better buy for your specific priorities.
+                Compare mode requests allow up to 120 seconds since both pipelines run fresh data simultaneously;
+                cached results return instantly just like single searches.
+              </P>
+            </div>
             <div>
               <H3>Gets Faster With Use</H3>
               <P>
@@ -166,6 +192,14 @@ export function DocsPage({ onBack }: { onBack: () => void }) {
                 relevant that the sliders can't capture — your shoe size, your PC's specs, how you plan
                 to use the item, budget constraints in a specific currency, or anything else. The more
                 context you give, the more tailored your recommendation will be.
+              </P>
+            </div>
+            <div>
+              <H3>Share a Result</H3>
+              <P>
+                Every recommendation page has a <strong>Share</strong> button that encodes your product and preferences into a URL.
+                Anyone who opens the link will automatically get the same recommendation run for them —
+                useful for sending a buying decision to a friend or saving a specific configuration.
               </P>
             </div>
             <div>

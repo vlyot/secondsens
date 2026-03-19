@@ -9,6 +9,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"secondsense/backend/src/prices"
@@ -39,12 +40,57 @@ func HandleRecommendation(
 
 		ctx := c.Request.Context()
 		forceRefresh := c.Query("force_refresh") == "true"
-
-		// Extract country code from request header (sent by frontend based on browser locale).
-		// Falls back to empty string which the price service treats as US+GB default.
 		countryCode := strings.ToUpper(strings.TrimSpace(c.GetHeader("X-Country")))
 
-		// Step 1: Resolve canonical product name.
+		// runPipeline executes the full price-fetch + recommendation pipeline for a single product.
+		// It checks and writes both the in-memory cache and the Supabase shared cache.
+		runPipeline := func(canonicalName string) (*domain.RecommendationResponse, error) {
+			memCacheKey := buildCacheKey(canonicalName, &req.Preferences, countryCode)
+			if !forceRefresh {
+				if cached, ok := recCache.Get(memCacheKey); ok {
+					if resp, ok := cached.(*domain.RecommendationResponse); ok {
+						return resp, nil
+					}
+				}
+			}
+
+			prefsHash := buildPrefsHash(&req.Preferences, countryCode)
+			if !forceRefresh && supabaseClient != nil {
+				if supabaseCached, fetchedAt, err := supabaseClient.GetCachedRecommendation(canonicalName, prefsHash); err != nil {
+					log.Printf("supabase cache lookup failed (skipping): %v", err)
+				} else if supabaseCached != nil {
+					recCache.Set(memCacheKey, supabaseCached)
+					resp := *supabaseCached
+					resp.Cached = true
+					resp.CachedAt = fetchedAt
+					return &resp, nil
+				}
+			}
+
+			priceData, priceSource, err := priceSvc.FetchPrices(ctx, canonicalName, countryCode)
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch prices: %w", err)
+			}
+			response, err := recSvc.Generate(ctx, canonicalName, priceData, &req.Preferences)
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate recommendation: %w", err)
+			}
+			response.PriceSource = priceSource
+
+			recCache.Set(memCacheKey, response)
+			if supabaseClient != nil {
+				prefsHashCopy := prefsHash
+				responseCopy := response
+				go func() {
+					if err := supabaseClient.UpsertCachedRecommendation(canonicalName, prefsHashCopy, responseCopy); err != nil {
+						log.Printf("supabase cache upsert failed: %v", err)
+					}
+				}()
+			}
+			return response, nil
+		}
+
+		// Step 1: Resolve primary product.
 		canonicalName, disambig, httpStatus, apiErr := resolveProduct(ctx, req.Item, productSvc)
 		if apiErr != "" {
 			c.JSON(httpStatus, gin.H{"error": apiErr})
@@ -55,56 +101,54 @@ func HandleRecommendation(
 			return
 		}
 
-		// Step 2: Check in-memory cache (fast path, skip on force_refresh).
-		memCacheKey := buildCacheKey(canonicalName, &req.Preferences, countryCode)
-		if !forceRefresh {
-			if cached, ok := recCache.Get(memCacheKey); ok {
-				c.JSON(200, cached)
+		// Compare mode: run both pipelines concurrently when compare_product is present.
+		if req.CompareProduct != "" {
+			compareCanonical, compareDisambig, httpStatus, apiErr := resolveProduct(ctx, req.CompareProduct, productSvc)
+			if apiErr != "" {
+				c.JSON(httpStatus, gin.H{"error": apiErr})
 				return
 			}
-		}
-
-		// Step 3: Check Supabase shared cache (skip on force_refresh).
-		prefsHash := buildPrefsHash(&req.Preferences, countryCode)
-		if !forceRefresh && supabaseClient != nil {
-			if supabaseCached, fetchedAt, err := supabaseClient.GetCachedRecommendation(canonicalName, prefsHash); err != nil {
-				log.Printf("supabase cache lookup failed (skipping): %v", err)
-			} else if supabaseCached != nil {
-				// Store clean copy in mem-cache (no Cached flag), serve decorated copy.
-				recCache.Set(memCacheKey, supabaseCached)
-				resp := *supabaseCached
-				resp.Cached = true
-				resp.CachedAt = fetchedAt
-				c.JSON(200, &resp)
+			if compareDisambig != nil {
+				// Signal to the frontend that it's the compare product that is ambiguous.
+				c.JSON(200, gin.H{"status": "AMBIGUOUS", "matches": compareDisambig, "context": "compare"})
 				return
 			}
-		}
 
-		// Step 4: Fetch prices.
-		priceData, priceSource, err := priceSvc.FetchPrices(ctx, canonicalName, countryCode)
-		if err != nil {
-			c.JSON(502, gin.H{"error": fmt.Sprintf("Failed to fetch prices: %v", err)})
-			return
-		}
-
-		// Step 5: Generate recommendation.
-		response, err := recSvc.Generate(ctx, canonicalName, priceData, &req.Preferences)
-		if err != nil {
-			c.JSON(502, gin.H{"error": fmt.Sprintf("Failed to generate recommendation: %v", err)})
-			return
-		}
-
-		// Attach price source map so the frontend can show per-tier data provenance.
-		response.PriceSource = priceSource
-
-		// Step 6: Persist to Supabase cache and in-memory cache, then return.
-		recCache.Set(memCacheKey, response)
-		if supabaseClient != nil {
+			var (
+				primaryResult  *domain.RecommendationResponse
+				compareResult  *domain.RecommendationResponse
+				primaryErr     error
+				compareErr     error
+				wg             sync.WaitGroup
+			)
+			wg.Add(2)
 			go func() {
-				if err := supabaseClient.UpsertCachedRecommendation(canonicalName, prefsHash, response); err != nil {
-					log.Printf("supabase cache upsert failed: %v", err)
-				}
+				defer wg.Done()
+				primaryResult, primaryErr = runPipeline(canonicalName)
 			}()
+			go func() {
+				defer wg.Done()
+				compareResult, compareErr = runPipeline(compareCanonical)
+			}()
+			wg.Wait()
+
+			if primaryErr != nil {
+				c.JSON(502, gin.H{"error": primaryErr.Error()})
+				return
+			}
+			if compareErr != nil {
+				c.JSON(502, gin.H{"error": compareErr.Error()})
+				return
+			}
+			c.JSON(200, &domain.CompareResponse{Primary: primaryResult, Compare: compareResult})
+			return
+		}
+
+		// Single-product path.
+		response, err := runPipeline(canonicalName)
+		if err != nil {
+			c.JSON(502, gin.H{"error": err.Error()})
+			return
 		}
 		c.JSON(200, response)
 	}

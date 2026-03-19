@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from '@/components/ui/button';
 import { Small, Medium } from '@/components/ui/typography';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { ProductThumbnail } from '@/components/ProductThumbnail';
 
 /**
  * ProductDisambiguation - Animated modal for selecting from multiple product matches
@@ -53,13 +54,18 @@ export function ProductDisambiguation({
                 whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
                 whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
               >
-                <Medium className="group-hover:text-primary transition-colors">
-                  {product.canonical_name}
-                </Medium>
-                <Small className="text-muted-foreground mt-1">
-                  {product.category.replace('_', ' ')} • {product.aliases.slice(0, 2).join(', ')}
-                  {product.aliases.length > 2 && `...`}
-                </Small>
+                <div className="flex items-center gap-3">
+                  <ProductThumbnail productName={product.canonical_name} size="sm" />
+                  <div className="min-w-0">
+                    <Medium className="group-hover:text-primary transition-colors">
+                      {product.canonical_name}
+                    </Medium>
+                    <Small className="text-muted-foreground mt-1">
+                      {product.category.replace('_', ' ')} • {product.aliases.slice(0, 2).join(', ')}
+                      {product.aliases.length > 2 && `...`}
+                    </Small>
+                  </div>
+                </div>
               </motion.button>
             ))}
           </AnimatePresence>
