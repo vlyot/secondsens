@@ -73,7 +73,7 @@ export async function getRecommendation(
     ...(compareProduct ? { compare_product: compareProduct } : {}),
   };
   const controller = new AbortController();
-  const timeoutMs = compareProduct ? 120_000 : 60_000;
+  const timeoutMs = compareProduct ? 120_000 : 100_000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const endpoint = forceRefresh
     ? `${API_URL}/api/recommend?force_refresh=true`

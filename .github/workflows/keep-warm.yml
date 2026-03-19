@@ -10,4 +10,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping backend health endpoint
-        run: curl -sf https://secondsens.onrender.com/health
+        run: curl -sf --max-time 60 --retry 3 --retry-delay 10 https://secondsens.onrender.com/health
