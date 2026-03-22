@@ -11,3 +11,10 @@ jobs:
     steps:
       - name: Ping backend health endpoint
         run: curl -sf --max-time 60 --retry 3 --retry-delay 10 https://secondsens.onrender.com/health
+
+      - name: Ping Supabase to prevent inactivity pause
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          curl -sf --max-time 30 --retry 3 --retry-delay 5 "$SUPABASE_URL/rest/v1/" -H "apikey: $SUPABASE_ANON_KEY"
