@@ -1,3 +1,0 @@
-[static]
-build_command = "npm ci && npm run build"
-output_dir = "dist"
