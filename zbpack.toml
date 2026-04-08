@@ -1,0 +1,5 @@
+[build]
+build_command = "npm ci && npm run build"
+
+[deploy]
+output_dir = "dist"
