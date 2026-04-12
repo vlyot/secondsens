@@ -323,6 +323,28 @@ func (s *SupabaseClient) UpsertImageCache(productName, imageURL string) error {
 	return nil
 }
 
+// Ping makes a lightweight HEAD request to the PostgREST root to keep the
+// Supabase connection pool warm. Returns nil on success.
+func (s *SupabaseClient) Ping() error {
+	req, err := http.NewRequest(http.MethodGet, s.baseURL+"/rest/v1/", nil)
+	if err != nil {
+		return fmt.Errorf("ping: create request: %w", err)
+	}
+	s.setHeaders(req)
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("ping: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 500 {
+		b, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("ping: supabase error (%d): %s", resp.StatusCode, string(b))
+	}
+	return nil
+}
+
 func (s *SupabaseClient) setHeaders(req *http.Request) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("apikey", s.serviceRoleKey)

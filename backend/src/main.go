@@ -80,6 +80,7 @@ func main() {
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	router.GET("/health", healthHandler)
+	router.GET("/ping-db", pingDBHandler(supabaseClient))
 	router.GET("/api/products", products.HandleProductList(productService))
 	router.GET("/api/products/popular", products.HandlePopularProducts(supabaseClient))
 	router.GET("/api/products/search", products.HandleProductSearch(productService))
@@ -159,6 +160,29 @@ func rateLimitMiddleware() gin.HandlerFunc {
 			return
 		}
 		c.Next()
+	}
+}
+
+// pingDBHandler godoc
+// @Summary      Database keep-warm ping
+// @Description  Makes a lightweight request to Supabase to keep the connection pool active. Used by cron jobs to prevent cold starts.
+// @Tags         system
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Failure      503  {object}  map[string]string
+// @Router       /ping-db [get]
+func pingDBHandler(supabase *shared.SupabaseClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if supabase == nil {
+			c.JSON(http.StatusOK, gin.H{"status": "ok", "db": "disabled"})
+			return
+		}
+		if err := supabase.Ping(); err != nil {
+			log.Printf("ping-db failed: %v", err)
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "message": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "ok", "db": "reachable"})
 	}
 }
 
