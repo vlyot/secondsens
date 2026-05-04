@@ -104,6 +104,22 @@ func main() {
 		log.Println("History routes disabled (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set)")
 	}
 
+	// Start in-process keep-warm loop to prevent Supabase free-tier pausing.
+	if supabaseClient != nil {
+		go func() {
+			ticker := time.NewTicker(12 * time.Hour)
+			defer ticker.Stop()
+			for range ticker.C {
+				if err := supabaseClient.Ping(); err != nil {
+					log.Printf("keep-warm ping failed: %v", err)
+				} else {
+					log.Println("keep-warm ping: Supabase reachable")
+				}
+			}
+		}()
+		log.Println("Supabase keep-warm loop started (interval: 12h)")
+	}
+
 	log.Printf("Server running on :%s", cfg.Port)
 	router.Run(":" + cfg.Port)
 }
